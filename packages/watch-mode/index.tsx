@@ -299,7 +299,7 @@ const RunScenario = ({
             setStepIdx(stepIdx + 1);
           }}
           onFail={async ({ message }) => {
-            const screenshot_path = `./failure/${scenario.title}.png`;
+            const screenshot_path = `./failure/${scenario.title}.png` as const;
             try {
               await fs.mkdir("./failure");
             } catch (e) {}
