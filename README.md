@@ -1,29 +1,48 @@
 # B2B 🎛️🎚️🎛️
 
-A tool for testing applications.
+✨ Write tests in human language (Gherkin) and verify program behavior with headless browser automation (Puppeteer).
 
-<img src="./demo.gif">
+🚀 Easy setup. No test-ids needed in your html - it reads the page like a human.
 
-# Quick Start
+![Demo](https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExazBmem53ZGg0OW5jY2lwYXY0Nzl5NncyamlsNXV2ZmxtMDMzdDczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5TCesEg1W2NHsWenYI/giphy.gif)
 
-```
-# create feature file directory
-bun x @janwirth/b2b init
-# development mode
-bun x @janwirth/b2b watch
-# run all (not implemented)
-bun x @janwirth/b2b
-```
+## Quick Start
 
-# Usage
-Given you have a server running on localhost:3000
-And you run `bun x @janwirth/b2b init`
-Then running `bun x @janwirth/b2b watch`
+1. 🌐 Start a server on localhost:3000
+2. ⚡ Run `bun x @janwirth/b2b init`
+   This will create an example feature file:
+
+   ```gherkin
+   Feature: Example
+
+   Scenario: Example
+     When I open localhost:3000
+     Then I see "Hello, World!"
+   ```
+
+3. 👀 Run `bun x @janwirth/b2b watch` to start interactive mode
+
+![Watch mode](https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrcGVuMjg5ODF0OWdiMDE4emlzbjZvemNscWsxcXM0NXp2emZqaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/U8YmUzgsHpysM1LExG/giphy.gif)
+
+## Use Cases
+
+- 🛡️ **Quality Assurance**: Prevent regression bugs. Avoid the "two steps forward, one step back" problem.
+
+- 🗺️ **Design Handoff via (Happy) Path Mapping**: Map user journeys through UI designs. Gherkin files mirror design complexity and reveal user effort required.
+
+- 🤝 **Client Handoff**: Demonstrate functionality with executable specifications. Clients see exactly how features work; requirement changes reflect immediately in test scenarios.
+
+- 🤖 **AI-Assisted Engineering**: Natural language test scenarios work well with AI tools like Cursor. Unit tests fall short for long-running processes and UI testing. The structured Gherkin format helps AI understand requirements and suggest improvements.
 
 ## Features
-- Feature parser
-- Annotations
-- Screen recordings / Screenshots of failures
-- Watch mode
-- Find element by content
-- OCR images
+
+- 📝 Feature parser
+- 🏷️ Annotations `@skip` and `@focus`
+- 📹 Screen recordings and failure screenshots
+- 👀 Watch mode
+- 🎯 Content-based element finding
+- 👁️ OCR image processing
+
+## Perspectives
+
+- 🎬 Effortlessly record product demos for marketing purposes using the latest UI
