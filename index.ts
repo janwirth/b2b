@@ -1,0 +1,114 @@
+#!/usr/bin/env bun
+
+import { Command } from "commander";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import Bun from "bun";
+import { mkdir } from "fs/promises";
+import { getAllFeatures } from "./packages/feature-parser/loadFeatures";
+import { rm } from "fs/promises";
+import chalk from "chalk";
+import { start_interactive } from "./packages/watch-mode";
+
+const program = new Command();
+
+// Get version from package.json
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, "package.json"), "utf8")
+);
+
+program
+  .name("b2b")
+  .description("A tool for testing applications")
+  .version(packageJson.version || "1.0.0");
+
+import { readdir } from "node:fs/promises";
+import {
+  printCheatSheet,
+  shutdownBrowsers,
+} from "./packages/step-library/steps";
+
+export const dir_exists = async (path: string) => {
+  try {
+    await readdir(path);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+program
+  .command("init")
+  .description("Create feature file directory")
+  .option("-f, --force", "Force overwrite of feature file directory")
+  .action(async ({ force }) => {
+    console.log("Initializing B2B test directory...");
+    // TODO: Implement directory creation logic
+    if (force) {
+      console.log(chalk.yellow("Overwriting feature file directory..."));
+      try {
+        await rm("./features", { force: true, recursive: true });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const init = async () => {
+      if (!(await dir_exists("./features"))) {
+        await mkdir("./features");
+        await Bun.file("./features/example.feature")
+          .writer()
+          .write(exampleFeature);
+        console.log(
+          chalk.green("Feature file directory created successfully!")
+        );
+      } else {
+        console.error(
+          "Feature file directory already exists. Use --force to override."
+        );
+      }
+    };
+    await init();
+  });
+
+const exampleFeature = `
+Feature: Example
+
+Scenario: Example
+    When I open localhost:3000
+    Then I see "Hello, World!"
+`;
+
+program
+  .command("watch")
+  .description("Run in development mode with file watching")
+  .action(async () => {
+    if (await dir_exists("./features")) {
+      await start_interactive();
+      await shutdownBrowsers();
+    } else {
+      console.error(
+        "Feature directory not found. Run `b2b init` to create it."
+      );
+    }
+  });
+program
+  .command("run")
+  .description("Run all tests")
+  .action(async () => {
+    const features = await getAllFeatures();
+    throw new Error("Not implemented");
+  });
+
+program
+  .command("cheatsheet")
+  .description("Print a cheat sheet of all steps")
+  .action(async () => {
+    printCheatSheet();
+  });
+// Default action when no command is specified (equivalent to 'run')
+program.action(async () => {
+  const features = await getAllFeatures();
+  console.log(program.help());
+  // TODO: Implement test execution logic
+});
+
+program.parse();

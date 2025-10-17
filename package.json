@@ -1,0 +1,42 @@
+{
+  "name": "@janwirth/b2b",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build --target=bun ./index.ts --outfile=dist/index.js",
+    "test": "bun test --timeout 10000"
+  },
+  "bin": {
+    "b2b": "dist/index.js",
+    "b2b-dev": "index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@inkjs/ui": "^2.0.0",
+    "@inkkit/ink-image": "^1.0.0",
+    "@types/react": "^18.3.5",
+    "@types/yadda": "^2.0.6",
+    "ink": "^5.0.1",
+    "puppeteer": "^23.3.0",
+    "react": "^18.3.1",
+    "tesseract.js": "^5.1.1",
+    "yadda": "^2.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "patchedDependencies": {
+    "yadda@2.2.0": "patches/yadda@2.2.0.patch"
+  },
+  "dependencies": {
+    "@mobily/ts-belt": "^3.13.1",
+    "chevrotain": "^11.0.3",
+    "commander": "^14.0.1",
+    "date-fns": "^4.1.0",
+    "open": "^10.1.0",
+    "react-devtools-core": "^7.0.0",
+    "zod": "^4.1.12"
+  },
+  "private": false
+}

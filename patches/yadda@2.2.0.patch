@@ -1,0 +1,26 @@
+diff --git a/node_modules/yadda/.bun-tag-f30425a503d5d11 b/.bun-tag-f30425a503d5d11
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib/parsers/FeatureParser.js b/lib/parsers/FeatureParser.js
+index c496cdc31713217f88faa5859288e628de844b23..d2e95dfa8dd716b319ff7b14c7433b97414b122a 100644
+--- a/lib/parsers/FeatureParser.js
++++ b/lib/parsers/FeatureParser.js
+@@ -126,7 +126,8 @@ var FeatureParser = function (options) {
+     };
+ 
+     this.export = function () {
+-      if (!feature) throw new Error('A feature must contain one or more scenarios');
++      if (!feature)
++      return null
+       return feature.export();
+     };
+   };
+@@ -180,7 +181,7 @@ var FeatureParser = function (options) {
+     }
+ 
+     function validate() {
+-      if (scenarios.length === 0) throw new Error('Feature requires one or more scenarios');
++      // if (scenarios.length === 0) throw new Error('Feature requires one or more scenarios');
+     }
+ 
+     this.on = function (event, data, line_number) {

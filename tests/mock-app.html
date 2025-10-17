@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hello World Test Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        text-align: center;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 30px;
+      }
+
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 10px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      #message {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #28a745;
+        font-weight: bold;
+      }
+
+      #clipboardMessage {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #dc3545;
+        font-weight: bold;
+      }
+
+      .image-container {
+        margin-top: 30px;
+        padding: 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+      }
+
+      .test-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+    <button id="pressMeBtn">Press me</button>
+    <div id="message"></div>
+
+    <button id="copyToClipboardBtn">Copy to clipboard</button>
+    <div id="clipboardMessage"></div>
+
+    <textarea aria-label="example-input"></textarea>
+
+    <script>
+      document
+        .getElementById("pressMeBtn")
+        .addEventListener("click", function () {
+          document.getElementById("message").textContent = "The sun is shining";
+        });
+
+      document
+        .getElementById("copyToClipboardBtn")
+        .addEventListener("click", async function () {
+          try {
+            const imageUrl = window.location.origin + "/image-with-text.png";
+            await navigator.clipboard.writeText(imageUrl);
+            document.getElementById("clipboardMessage").textContent =
+              "Link copied";
+          } catch (err) {
+            document.getElementById("clipboardMessage").textContent =
+              "Failed to copy link";
+          }
+        });
+    </script>
+  </body>
+</html>

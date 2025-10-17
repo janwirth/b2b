@@ -1,0 +1,12 @@
+{
+  "name": "@packages/runner",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@packages/step-library": "workspace:*",
+    "@packages/feature-parser": "workspace:*"
+  }
+}
+
+
