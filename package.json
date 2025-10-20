@@ -30,6 +30,7 @@
     "yadda@2.2.0": "patches/yadda@2.2.0.patch"
   },
   "dependencies": {
+    "@jantimon/glob-watch": "^0.2.0",
     "@mobily/ts-belt": "^3.13.1",
     "chevrotain": "^11.0.3",
     "commander": "^14.0.1",

@@ -9,18 +9,18 @@ import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
 import { parseStep } from "../step-library/steps";
 import { getAllFeatures } from "../feature-parser/loadFeatures";
+import { suggestMostLikelyMatches } from "../step-parser/suggest-most-likely-matches";
 
 const timeout = (ms: number) => new Promise((res) => setTimeout(res, ms));
+import chalk from "chalk";
 
 const loadFeatures = async () => {
   const features = await getAllFeatures();
   const errs = features.parseResults.filter((x) => x?.type == "Err");
   if (errs.length) {
     const err = `
-
-PARSING OF FOLLOWING STEPS FAILED:
-
-${errs.map((x, idx) => `${idx + 1}. ${x.step}`).join("\n")}
+${chalk.red("Could not parse the following steps:")}
+${errs.map((x, idx) => `${suggestMostLikelyMatches(x.step)}`).join("\n")}
 `;
     return { type: "parse-error" as const, message: err };
   } else {
@@ -29,14 +29,49 @@ ${errs.map((x, idx) => `${idx + 1}. ${x.step}`).join("\n")}
 };
 type Feature = Awaited<ReturnType<typeof getAllFeatures>>["features"][number];
 
-const App = () => {
-  const [parseResult, setParseResult] = useState<
-    Awaited<ReturnType<typeof loadFeatures>> | { type: "pending" }
-  >({ type: "pending" });
+import { watch } from "@jantimon/glob-watch";
 
+// // Start watching files
+// const destroy = await watch(
+//   "**/*.feature",
+//   (changes) => {
+//     console.log("Added files:", changes.added);
+//     console.log("Changed files:", changes.changed);
+//     console.log("Deleted files:", changes.deleted);
+//   },
+//   { mode: "fast-glob" }
+// );
+// setTimeout(() => {
+//   console.log("Destroying watch");
+//   destroy();
+// }, 10000);
+
+const useLatestFeatures = () => {
+  const [parseResult, setParseResult] = useState<
+    LoadFeaturesResult | { type: "pending" }
+  >({ type: "pending" });
   useEffect(() => {
-    loadFeatures().then(setParseResult);
+    const destroy = watch(
+      "**/*.feature",
+      (changes) => {
+        console.log("Added files:", changes.added);
+        console.log("Changed files:", changes.changed);
+        console.log("Deleted files:", changes.deleted);
+        loadFeatures().then(setParseResult);
+      },
+      { mode: "fast-glob" }
+    );
+    return () => {
+      destroy.then((d) => d());
+    };
   }, []);
+  return parseResult;
+};
+type LoadFeaturesResult = Awaited<ReturnType<typeof loadFeatures>>;
+
+const App = () => {
+  const parseResult = useLatestFeatures();
+  useEffect(() => {}, [parseResult]);
   if (parseResult.type == "pending") {
     return (
       <Box gap={1}>
@@ -46,12 +81,7 @@ const App = () => {
       </Box>
     );
   } else if (parseResult.type == "parse-error") {
-    return (
-      <Text>
-        PARSE Error
-        {parseResult.message}
-      </Text>
-    );
+    return <Text>{parseResult.message}</Text>;
   } else if (parseResult.type == "loaded") {
     return (
       <Runner

@@ -49,7 +49,7 @@ export function step<T extends Record<string, ParserTypes>, Output>(
     const maxLength = Math.max(tokens.length, parsers.length);
     for (let i = 0; i < maxLength; i++) {
       const token = tokens[i];
-      const [key, parser] = parsers[i];
+      const parserEntry = parsers[i];
 
       // Check if we've run out of tokens
       if (token === undefined) {
@@ -63,7 +63,7 @@ export function step<T extends Record<string, ParserTypes>, Output>(
       }
 
       // Check if we've run out of parsers
-      if (parser === undefined) {
+      if (parserEntry === undefined) {
         return {
           type: "fail",
           expected: `${parsers.length} tokens`,
@@ -72,6 +72,8 @@ export function step<T extends Record<string, ParserTypes>, Output>(
           input: step,
         };
       }
+
+      const [key, parser] = parserEntry;
 
       let parseResult;
       if (typeof parser === "string") {

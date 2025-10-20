@@ -73,44 +73,12 @@ test("Trim Given, when, then, and", () => {
   expect(result2.args.input_name).toBe("bio");
 });
 
-const scores: Record<string, number> = {
-  I: 1,
-  write: 2,
-  text: 1,
-  into: 2,
-  the: 1,
-  input_name: 1,
-};
 test.only("Most likely matches", () => {
   const input = "I write 'Hello World' into the bio";
-  const tokens = tokenize(input);
-  const result = parseStep(input);
-  if (result.type === "success") {
-    throw new Error("Expected fail");
-  }
-  const evaled = result.failedSteps.map((f) => {
-    const candidate_tokens = tokenize(f.step.description);
-    const intersection = A.intersection(tokens, candidate_tokens);
-    const score = intersection.reduce(
-      (acc, token) => acc + (scores[token] ?? 1),
-      0
-    );
-    return { ...f, score };
-  });
-  const sorted = A.sortBy(evaled, (x) => -x.score);
-  const candidates = sorted
-    .slice(0, 3)
-    .map((x) => `- ${x.step.description}`)
-    .join("\n");
-  const info = `
-${chalk.red("Could not parse step")}
-
-> ${input}
-
-Did you mean one of the following?:
-
-${candidates}
-`;
-  console.log(info);
+  // console.log(info);
+  console.log(
+    `Most likely matches PASS IF LOOK GOOD: ${suggestMostLikelyMatches(input)}`
+  );
 });
 import chalk from "chalk";
+import { suggestMostLikelyMatches } from "./suggest-most-likely-matches";
