@@ -24,6 +24,7 @@ export type Context = {
   browser?: Browser;
   page?: Page;
   recorder?: ScreenRecorder;
+  featureFilePath?: string;
 };
 
 export type StepResult =
@@ -124,7 +125,7 @@ export const steps = {
     {
       I,
       search,
-      for: for_,
+      for_,
       query: z.string(),
     },
     async ({ query }, context) => {
@@ -440,8 +441,19 @@ ${(e as Error).message}
         throw new Error(`Could not find file input element on the page`);
       }
 
-      // Get the absolute path to the file
-      const filePath = `/Users/janwirth/b2b/features/${cleanFilename}`;
+      // Get the path relative to the feature file directory
+      let filePath: string;
+      if (context.featureFilePath) {
+        // Get the directory of the feature file
+        const featureDir = context.featureFilePath.substring(
+          0,
+          context.featureFilePath.lastIndexOf("/")
+        );
+        filePath = `${featureDir}/${cleanFilename}`;
+      } else {
+        // Fallback to the old behavior if featureFilePath is not available
+        filePath = `/Users/janwirth/b2b/features/${cleanFilename}`;
+      }
 
       try {
         // Upload the file
@@ -453,7 +465,9 @@ ${(e as Error).message}
         return { type: "success" };
       } catch (e) {
         throw new Error(
-          `Could not upload file '${cleanFilename}': ${(e as Error).message}`
+          `Could not upload file '${cleanFilename}' from '${filePath}': ${
+            (e as Error).message
+          }`
         );
       }
     }

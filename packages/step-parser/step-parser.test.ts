@@ -73,7 +73,7 @@ test("Trim Given, when, then, and", () => {
   expect(result2.args.input_name).toBe("bio");
 });
 
-test.only("Most likely matches", () => {
+test("Most likely matches", () => {
   const input = "I write 'Hello World' into the bio";
   // console.log(info);
   console.log(

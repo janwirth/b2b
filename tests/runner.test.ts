@@ -73,7 +73,7 @@ test("Input", async () => {
   });
 });
 
-test.only("File Upload", async () => {
+test("File Upload", async () => {
   const features = await getAllFeatures();
   const feature = getFeature(features, "File Upload");
   if (!feature) {

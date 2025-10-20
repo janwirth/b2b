@@ -3,5 +3,5 @@ import { getAllFeatures } from "./loadFeatures";
 
 test("All features are parsed", async () => {
   const features = await getAllFeatures();
-  expect(features.features.length).toBe(5);
+  expect(features.features.length).toBe(6);
 });

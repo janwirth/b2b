@@ -80,7 +80,9 @@ export const runFeature = async (
   const { headless = true, closeAfterFail = true, onUpdate } = options;
 
   const startTime = Date.now();
-  const context: Context = {};
+  const context: Context = {
+    featureFilePath: feature.filePath,
+  };
 
   try {
     onUpdate?.({ type: "feature_started", featureTitle: feature.title });
