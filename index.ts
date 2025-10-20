@@ -22,20 +22,13 @@ program
   .description("A tool for testing applications")
   .version(packageJson.version || "1.0.0");
 
-import { readdir } from "node:fs/promises";
 import {
   printCheatSheet,
   shutdownBrowsers,
 } from "./packages/step-library/steps";
+import { runFeature } from "./packages/runner";
+import { dir_exists } from "./dir_exists";
 
-export const dir_exists = async (path: string) => {
-  try {
-    await readdir(path);
-    return true;
-  } catch (err) {
-    return false;
-  }
-};
 program
   .command("init")
   .description("Create feature file directory")
@@ -95,7 +88,29 @@ program
   .description("Run all tests")
   .action(async () => {
     const features = await getAllFeatures();
-    throw new Error("Not implemented");
+    for (const feature of features.features) {
+      await runFeature(feature, {
+        onUpdate: (update) => {
+          switch (update.type) {
+            case "feature_started":
+              console.log(`  Starting feature: ${update.featureTitle}`);
+              break;
+            case "scenario_started":
+              console.log(`  Starting scenario: ${update.scenarioTitle}`);
+              break;
+            case "step_started":
+              console.log(`  Starting step: ${update.step}`);
+              break;
+            case "step_completed":
+              console.log(`  Completed step: ${update.step}`);
+              break;
+            case "scenario_completed":
+              console.log(`  Completed scenario: ${update.scenarioTitle}`);
+              break;
+          }
+        },
+      });
+    }
   });
 
 program

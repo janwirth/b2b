@@ -194,11 +194,11 @@ const Runner = ({
             <Box flexDirection="column">
               <Box>
                 <Badge color={"red"}>FAIL</Badge>
-                <Text>{f.title}</Text>
-                <Text>{f.message}</Text>
+                <Text> {f.title}</Text>
               </Box>
+              <Text>{f.message}</Text>
               <Text>{JSON.stringify(f.image)}</Text>
-              {f.image && <Image src={f.image} />}
+              {f.image && <Image width={30} height={30} src={f.image} />}
             </Box>
           </UnorderedList.Item>
         ))}
@@ -251,6 +251,7 @@ const RunFeature = ({
     <Box flexDirection="column">
       <Text bold>{scenario.title}</Text>
       <RunScenario
+        featureFilePath={feature.filePath}
         headless={headless}
         closeAfterFail={closeAfterFail}
         key={scenario.title}
@@ -268,19 +269,23 @@ type Scenario = Awaited<
   ReturnType<typeof getAllFeatures>
 >["features"][number]["scenarios"]["items"][number];
 const RunScenario = ({
+  featureFilePath,
   scenario,
   onComplete,
   onFail,
   headless,
   closeAfterFail,
 }: {
+  featureFilePath: string;
   scenario: Scenario;
   onComplete: () => void;
   onFail: (data: { type: "failure"; message: string; image?: string }) => void;
   headless: boolean;
   closeAfterFail: boolean;
 }) => {
-  const context = useRef<Context>({});
+  const context = useRef<Context>({
+    featureFilePath,
+  });
   const [stepIdx, setStepIdx] = useState(0);
   const step: string | undefined = scenario.steps[stepIdx];
   useEffect(() => {

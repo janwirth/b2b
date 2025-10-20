@@ -6,7 +6,7 @@
  * structured step definition system.
  */
 
-import type { Browser, Page, ScreenRecorder } from "puppeteer";
+import type { Browser, ElementHandle, Page, ScreenRecorder } from "puppeteer";
 import { fetch } from "bun";
 import puppeteer from "puppeteer";
 import { z } from "zod";
@@ -18,13 +18,16 @@ import {
 } from "../step-parser";
 import { ocrImageAtUrl } from "./ocr";
 import { inputSelector, selectXPath, assertUnreachable } from "./selectors";
+import { existsSync, readFileSync } from "node:fs";
+import { dir_exists } from "../../dir_exists";
+import { readFile } from "node:fs/promises";
 
 // Types
 export type Context = {
   browser?: Browser;
   page?: Page;
   recorder?: ScreenRecorder;
-  featureFilePath?: string;
+  featureFilePath: string;
 };
 
 export type StepResult =
@@ -72,6 +75,11 @@ const ensurePage = async (context: Context, headless: boolean) => {
   if (!context.page) {
     context.page = await context.browser.newPage();
 
+    context.page.on("request", (req) => {
+      if (req.url().includes("/api/cv-management/upload"))
+        console.log("Uploading:", req.headers()["content-type"]);
+    });
+
     await context.page.evaluate(() => {
       const clipboard = {
         text: "",
@@ -117,6 +125,8 @@ const does = "does";
 const contain = "contain";
 const title = "title";
 const upload = "upload";
+const select = "select";
+const file = "file";
 
 // Step definitions using the new step-parser
 export const steps = {
@@ -205,11 +215,13 @@ ${(e as Error).message}
       text: z.string(),
     },
     async ({ text }, context) => {
+      await timeout(100);
       const [browser, page] = await ensurePage(context, true);
       const txt = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
         await page.waitForSelector(selectXPath({ searchTerm: txt }), {
-          timeout: 1000,
+          timeout: 10000,
+          visible: true,
         });
       } catch (e) {
         throw new Error(`can not find '${txt}'
@@ -279,11 +291,27 @@ ${selectXPath({ searchTerm: txt })}
       const [browser, page] = await ensurePage(context, true);
       const txt__ = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
-        const toClick = await page.waitForSelector(
-          selectXPath({ searchTerm: txt__ }),
-          { timeout: 12000 }
-        );
-        await toClick?.click();
+        let el: ElementHandle<Element> | null = null;
+        try {
+          el = await page.waitForSelector(selectXPath({ searchTerm: txt__ }), {
+            timeout: 500,
+            visible: true,
+          });
+        } catch (e) {
+          console.error("SELECTOR NOT VISIBLE");
+          el = await page.waitForSelector(selectXPath({ searchTerm: txt__ }), {
+            timeout: 3000,
+            visible: true,
+          });
+        }
+        el!.click();
+        await timeout(200);
+
+        // const toClick = await page.click(selectXPath({ searchTerm: txt__ }, {timeout: }));
+        // const toClick = await page.waitForSelector(
+        //   selectXPath({ searchTerm: txt__ }),
+        //   { timeout: 100 }
+        // );
       } catch (e) {
         throw new Error(
           `can not click on '` +
@@ -428,7 +456,9 @@ ${(e as Error).message}
   upload: step(
     {
       I,
-      upload,
+      select,
+      the,
+      file,
       filename: z.string(),
     },
     async ({ filename }, context) => {
@@ -437,11 +467,12 @@ ${(e as Error).message}
 
       // Look for file input element
       const fileInput = await page.$('input[type="file"]');
+
       if (!fileInput) {
         throw new Error(`Could not find file input element on the page`);
       }
 
-      // Get the path relative to the feature file directory
+      // Get the path relative to the feature file directoryuuukx
       let filePath: string;
       if (context.featureFilePath) {
         // Get the directory of the feature file
@@ -450,28 +481,52 @@ ${(e as Error).message}
           context.featureFilePath.lastIndexOf("/")
         );
         filePath = `${featureDir}/${cleanFilename}`;
-      } else {
-        // Fallback to the old behavior if featureFilePath is not available
-        filePath = `/Users/janwirth/b2b/features/${cleanFilename}`;
-      }
-
-      try {
-        // Upload the file
-        await fileInput.uploadFile(filePath);
-
-        // Wait a moment for the upload to process
-        await timeout(1000);
-
+        await uploadFile(page, filePath);
         return { type: "success" };
-      } catch (e) {
-        throw new Error(
-          `Could not upload file '${cleanFilename}' from '${filePath}': ${
-            (e as Error).message
-          }`
-        );
+      } else {
+        throw new Error("Feature file path not found");
       }
     }
   ),
+};
+
+const uploadFile = async (page: Page, filePath: string) => {
+  const file = await readFile(filePath);
+
+  // 2. Convert to base64 so we can safely send it to the browser
+  const base64 = file.toString("base64");
+  await page.evaluate(
+    async (base64: string, filePath: string) => {
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      // 4. Create Blob with correct MIME
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      //Create blob and file from file string
+      const b = blob;
+      const dt = new DataTransfer();
+      dt.items.add(new File([b], filePath.split("/").pop() || "file"));
+
+      //Simulate drag and drop on your input field using DataTransfer class
+      const ele = document.querySelector("input[type=file]");
+      console.log("ele", ele);
+      if (ele) {
+        (ele as HTMLInputElement).files = dt.files;
+        (ele as HTMLInputElement).dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+        (ele as HTMLInputElement).dispatchEvent(
+          new Event("change", { bubbles: true })
+        );
+      }
+    },
+    base64,
+    filePath
+  );
 };
 
 // Find the best matching step definition

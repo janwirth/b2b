@@ -94,6 +94,7 @@ export const runFeature = async (
 
     for (const scenario of activeScenarios) {
       await runScenario(scenario, context, headless, onUpdate);
+      console.log("scenario completed", scenario.title);
     }
 
     const duration_ms = Date.now() - startTime;
