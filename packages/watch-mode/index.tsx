@@ -29,44 +29,25 @@ ${errs.map((x, idx) => `${suggestMostLikelyMatches(x.step)}`).join("\n")}
 };
 type Feature = Awaited<ReturnType<typeof getAllFeatures>>["features"][number];
 
-import { watch } from "@jantimon/glob-watch";
-
-// // Start watching files
-// const destroy = await watch(
-//   "**/*.feature",
-//   (changes) => {
-//     console.log("Added files:", changes.added);
-//     console.log("Changed files:", changes.changed);
-//     console.log("Deleted files:", changes.deleted);
-//   },
-//   { mode: "fast-glob" }
-// );
-// setTimeout(() => {
-//   console.log("Destroying watch");
-//   destroy();
-// }, 10000);
-
 const useLatestFeatures = () => {
   const [parseResult, setParseResult] = useState<
     LoadFeaturesResult | { type: "pending" }
   >({ type: "pending" });
   useEffect(() => {
-    const destroy = watch(
-      "**/*.feature",
-      (changes) => {
-        console.log("Added files:", changes.added);
-        console.log("Changed files:", changes.changed);
-        console.log("Deleted files:", changes.deleted);
-        loadFeatures().then(setParseResult);
-      },
-      { mode: "fast-glob" }
-    );
+    loadFeatures().then(setParseResult);
+    const watcher = watch("features", (event, filename) => {
+      // console.log(`Detected ${event} in ${filename}`);
+      loadFeatures().then(setParseResult);
+    });
     return () => {
-      destroy.then((d) => d());
+      watcher.close();
     };
   }, []);
   return parseResult;
 };
+
+import { watch } from "fs";
+
 type LoadFeaturesResult = Awaited<ReturnType<typeof loadFeatures>>;
 
 const App = () => {
@@ -85,7 +66,7 @@ const App = () => {
   } else if (parseResult.type == "loaded") {
     return (
       <Runner
-        onReloadFeature={() => loadFeatures().then(setParseResult)}
+        onReloadFeature={() => {}}
         features={parseResult.features.features}
       ></Runner>
     );
@@ -236,7 +217,7 @@ const Controls = ({
     <Box gap={2}>
       <Text>Headless [H]: {headless ? "Yes" : "No"}</Text>
       <Text>Close after Fail [C]: {closeAfterFail ? "Yes" : "No"}</Text>
-      <Text>Reload Specs [R]</Text>
+      {/* <Text>Reload Specs [R]</Text> */}
     </Box>
   );
 };
