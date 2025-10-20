@@ -6,7 +6,7 @@
   "scripts": {
     "build": "bun build --target=bun ./index.ts --outfile=dist/index.js",
     "test": "bun test --timeout 10000",
-    "prepublish": "bun run build"
+    "prepublishOnly": "bun run build"
   },
   "bin": {
     "b2b": "dist/index.js",
