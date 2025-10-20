@@ -115,6 +115,7 @@ const image = "image";
 const does = "does";
 const contain = "contain";
 const title = "title";
+const upload = "upload";
 
 // Step definitions using the new step-parser
 export const steps = {
@@ -419,6 +420,42 @@ ${(e as Error).message}
         `);
       }
       return { type: "success" };
+    }
+  ),
+
+  // "I upload <filename>"
+  upload: step(
+    {
+      I,
+      upload,
+      filename: z.string(),
+    },
+    async ({ filename }, context) => {
+      const [browser, page] = await ensurePage(context, true);
+      const cleanFilename = cleanStringArgs(filename);
+
+      // Look for file input element
+      const fileInput = await page.$('input[type="file"]');
+      if (!fileInput) {
+        throw new Error(`Could not find file input element on the page`);
+      }
+
+      // Get the absolute path to the file
+      const filePath = `/Users/janwirth/b2b/features/${cleanFilename}`;
+
+      try {
+        // Upload the file
+        await fileInput.uploadFile(filePath);
+
+        // Wait a moment for the upload to process
+        await timeout(1000);
+
+        return { type: "success" };
+      } catch (e) {
+        throw new Error(
+          `Could not upload file '${cleanFilename}': ${(e as Error).message}`
+        );
+      }
     }
   ),
 };

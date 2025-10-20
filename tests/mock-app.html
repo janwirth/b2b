@@ -72,6 +72,11 @@
 
     <textarea aria-label="example-input"></textarea>
 
+    <div style="margin-top: 20px">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx" />
+      <div id="uploadMessage" style="margin-top: 10px; font-weight: bold"></div>
+    </div>
+
     <script>
       document
         .getElementById("pressMeBtn")
@@ -90,6 +95,17 @@
           } catch (err) {
             document.getElementById("clipboardMessage").textContent =
               "Failed to copy link";
+          }
+        });
+
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+          if (file) {
+            document.getElementById("uploadMessage").textContent =
+              "File uploaded successfully";
+            document.getElementById("uploadMessage").style.color = "#28a745";
           }
         });
     </script>

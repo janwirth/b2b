@@ -72,6 +72,20 @@ test("Input", async () => {
     },
   });
 });
+
+test.only("File Upload", async () => {
+  const features = await getAllFeatures();
+  const feature = getFeature(features, "File Upload");
+  if (!feature) {
+    throw new Error("Feature not found");
+  }
+  // console.log("Running feature", feature.title);
+  await runFeature(feature, {
+    onUpdate: (update) => {
+      // console.log("Update", update);
+    },
+  });
+});
 import chalk from "chalk";
 import { shutdownBrowsers } from "../packages/step-library/steps";
 const serveRunning = async () => {
