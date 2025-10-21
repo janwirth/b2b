@@ -1,9 +1,7 @@
 import { z } from "zod";
 import { expect, test } from "bun:test";
 import { step } from "./step-parser";
-import { R } from "@mobily/ts-belt";
 import { suggestMostLikelyMatches } from "./suggest-most-likely-matches";
-import { getError } from "./getError";
 
 const I = "I";
 const write = "write";
@@ -24,21 +22,20 @@ const search_for = step(
 
 test("step parser keyword workaround", () => {
   const result = search_for.parse("I search for 'Hello World'");
-  if (!R.isOk(result)) {
+  if ("expected" in result) {
     throw new Error("Expected success");
   }
-  expect(R.isOk(result)).toBe(true);
+  expect("args" in result).toBe(true);
 });
 
 test("step parser failure case", () => {
   const result = input_text.parse("I write the text into the input_name");
-  if (R.isOk(result)) {
+  if ("args" in result) {
     throw new Error("Expected fail");
   }
-  const error = getError(result);
-  expect(error.actual).toBe("text");
-  expect(error.expected).toBe("into");
-  expect(error.parsed_so_far).toEqual([
+  expect(result.actual).toBe("text");
+  expect(result.expected).toBe("into");
+  expect(result.parsed_so_far).toEqual([
     { key: "I", value: "I" },
     { key: "write", value: "write" },
     { key: "text", value: "the" },
@@ -47,34 +44,31 @@ test("step parser failure case", () => {
 
 test("step parser success case", () => {
   const result = input_text.parse("I write 'Hello World' into the bio");
-  if (!R.isOk(result)) {
+  if ("expected" in result) {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result);
-  expect(R.isOk(result)).toBe(true);
-  expect(success.args.text).toBe("Hello World");
-  expect(success.args.input_name).toBe("bio");
+  expect("args" in result).toBe(true);
+  expect(result.args.text).toBe("Hello World");
+  expect(result.args.input_name).toBe("bio");
 });
 
 test("Trim Given, when, then, and", () => {
   const result = input_text.parse("Given I write 'Hello World' into the bio");
-  if (!R.isOk(result)) {
+  if ("expected" in result) {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result);
-  expect(R.isOk(result)).toBe(true);
-  expect(success.args.text).toBe("Hello World");
-  expect(success.args.input_name).toBe("bio");
+  expect("args" in result).toBe(true);
+  expect(result.args.text).toBe("Hello World");
+  expect(result.args.input_name).toBe("bio");
   const result2 = input_text.parse(
     "And then I write 'Hello World' into the bio"
   );
-  if (!R.isOk(result2)) {
+  if ("expected" in result2) {
     throw new Error("Expected success");
   }
-  const success2 = R.getExn(result2);
-  expect(R.isOk(result2)).toBe(true);
-  expect(success2.args.text).toBe("Hello World");
-  expect(success2.args.input_name).toBe("bio");
+  expect("args" in result2).toBe(true);
+  expect(result2.args.text).toBe("Hello World");
+  expect(result2.args.input_name).toBe("bio");
 });
 
 test("Most likely matches", () => {

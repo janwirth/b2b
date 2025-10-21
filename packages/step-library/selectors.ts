@@ -55,13 +55,13 @@ const translate = (what: XPathValue) => {
  */
 export const selectXPath = ({ searchTerm }: { searchTerm: string }) => {
   // Search in element text content
-  const content = `//body //*[contains(${translate({
+  const content = `//*[contains(${translate({
     type: "function",
     expression: selectAllText,
   })}, ${translate({ type: "literal", text: searchTerm })})]`;
 
   // Search in aria-label attributes
-  const aria = `//body //*[contains(${translate({
+  const aria = `//*[contains(${translate({
     type: "function",
     expression: "@aria-label",
   })}, ${translate({ type: "literal", text: searchTerm })})]`;

@@ -1,4 +1,3 @@
-@focus
 Feature: Reload
   Ensure refreshes work - the text disappears after refresh
 

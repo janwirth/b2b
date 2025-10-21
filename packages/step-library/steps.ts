@@ -190,7 +190,7 @@ ${(e as Error).message}
       await page.waitForNetworkIdle();
       let tries = 0;
       for (tries = 0; tries < 10; tries++) {
-        await timeout(100);
+        await timeout(40);
         try {
           const textValue = await page.$eval(
             inputSelector(label),
@@ -225,12 +225,12 @@ ${(e as Error).message}
       text: z.string(),
     },
     async ({ text }, context) => {
-      await timeout(100);
+      await timeout(30);
       const [browser, page] = await ensurePage(context, true);
       const txt = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
         await page.waitForSelector(selectXPath({ searchTerm: txt }), {
-          timeout: 10000,
+          timeout: 1000,
           // visible: true,
         });
       } catch (e) {
@@ -295,9 +295,10 @@ ${selectXPath({ searchTerm: txt })}
             selectXPath({ searchTerm: cleanText }),
             {
               timeout: 500,
+              visible: true,
             }
           );
-          console.log(await page.evaluate((el) => el.textContent, item));
+          // console.log(await page.evaluate((el) => el.textContent, item));
           // If we reach here, the element was found, which means we CAN see it
           // This is a failure because we expected NOT to see it
           console.log("doNotSee step found element, returning error");
