@@ -1,3 +1,4 @@
+@focus
 Feature: Reload
   As a user
   I want to reload the page
@@ -16,3 +17,4 @@ Feature: Reload
     Then I see "The sun is shining"
     And I reload the page
     Then I see "Hello World"
+    And I do not see "The sun is shining"
