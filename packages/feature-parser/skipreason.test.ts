@@ -3,7 +3,7 @@ import type { AllowedAnnotations } from "./loadFeatures";
 test.only("determineSkipReason works correctly", () => {
   for (const [name, feature] of Object.entries(ExampleFeatures)) {
     const skipReasonA = determineFeatureSkipReason({
-      annotations: feature.input.A.annotations,
+      annotations: parseFeature(feature.input.A)?.annotations ?? [],
       otherFeatures: feature.input.B.annotations,
     });
     const skipReasonB = determineFeatureSkipReason({
@@ -44,7 +44,7 @@ test.only("determineSkipReason works correctly", () => {
 });
 // separate skip reason functions for feature and scenario
 
-const determineFeatureSkipReason = ({
+export const determineFeatureSkipReason = ({
   annotations,
   otherFeatures,
 }: {
@@ -63,7 +63,7 @@ const determineFeatureSkipReason = ({
   return null;
 };
 
-const determineScenarioSkipReason = ({
+export const determineScenarioSkipReason = ({
   annotations,
   otherScenarios,
   otherFeatures,
@@ -92,8 +92,8 @@ const determineScenarioSkipReason = ({
 
 type ExampleFeature<T extends Record<string, any>> = {
   input: {
-    A: FeatureInput;
-    B: FeatureInput;
+    A: string;
+    B: string;
   };
   output: {
     A: FeatureOutput;
@@ -116,11 +116,12 @@ type FeatureOutput = {
 };
 
 import type { FeatureSkipReason, ScenarioSkipReason } from "./loadFeatures";
+import { parseFeature } from "./yadda-parser";
 const ExampleFeatures: Record<string, ExampleFeature<any>> = {
   oneFocused: {
     input: {
-      A: { scenarios: [], annotations: ["focus"] },
-      B: { scenarios: [], annotations: [] },
+      A: `@focus`,
+      B: ``,
     },
     output: {
       A: { skipReason: null, isFocused: true, scenarios: [] },
@@ -133,8 +134,8 @@ const ExampleFeatures: Record<string, ExampleFeature<any>> = {
   },
   oneSkipped: {
     input: {
-      A: { scenarios: [], annotations: ["skip"] },
-      B: { scenarios: [], annotations: [] },
+      A: `@skip`,
+      B: ``,
     },
     output: {
       A: {

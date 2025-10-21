@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import Bun from "bun";
 import { mkdir } from "fs/promises";
-import { getAllFeatures } from "./packages/feature-parser/loadFeatures";
+import { parseAllFeatureFiles } from "./packages/feature-parser/yadda-parser";
 import { rm } from "fs/promises";
 import chalk from "chalk";
 import { start_interactive } from "./packages/watch-mode";
@@ -87,8 +87,8 @@ program
   .command("run")
   .description("Run all tests")
   .action(async () => {
-    const features = await getAllFeatures();
-    for (const feature of features.features) {
+    const features = await parseAllFeatureFiles();
+    for (const feature of features) {
       await runFeature(feature, {
         onUpdate: (update) => {
           switch (update.type) {
@@ -121,7 +121,7 @@ program
   });
 // Default action when no command is specified (equivalent to 'run')
 program.action(async () => {
-  const features = await getAllFeatures();
+  const features = await parseAllFeatureFiles();
   console.log(program.help());
   // TODO: Implement test execution logic
 });

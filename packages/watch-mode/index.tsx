@@ -9,24 +9,23 @@ import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
 import { findBestStep } from "../step-library/steps";
 import {
-  getAllFeatures,
-  type Feature,
-  getParseResults,
-  type GetAllFeaturesResult,
-} from "../feature-parser/loadFeatures";
+  parseAllFeatureFiles,
+  type DecodedScenario,
+} from "../feature-parser/yadda-parser";
+import { type DecodedFeature } from "../feature-parser/yadda-parser";
 import { useRunnerInput } from "./useRunnerInput";
 
 const useLatestFeatures = () => {
   const [parseResult, setParseResult] = useState<
-    (GetAllFeaturesResult & { type: "loaded" }) | { type: "pending" }
+    { type: "loaded"; features: DecodedFeature[] } | { type: "pending" }
   >({ type: "pending" });
   useEffect(() => {
-    getAllFeatures().then((features) =>
-      setParseResult({ type: "loaded", ...features })
+    parseAllFeatureFiles().then((features) =>
+      setParseResult({ type: "loaded", features })
     );
     const watcher = watch("features", (event, filename) => {
-      getAllFeatures().then((features) =>
-        setParseResult({ type: "loaded", ...features })
+      parseAllFeatureFiles().then((features) =>
+        setParseResult({ type: "loaded", features })
       );
     });
     return () => {
@@ -68,7 +67,7 @@ const Runner = ({
   features,
   onReloadFeature,
 }: {
-  features: Feature[];
+  features: DecodedFeature[];
   onReloadFeature: () => void;
 }) => {
   const {
@@ -181,14 +180,12 @@ const RunFeature = ({
 }: {
   headless: boolean;
   closeAfterFail: boolean;
-  feature: Awaited<ReturnType<typeof getAllFeatures>>["features"][number];
+  feature: DecodedFeature;
   onPass: () => void;
   onFail: (data: { type: "failure"; message: string; image?: string }) => void;
 }) => {
   const [scenarioIdx, setScenarioIdx] = useState(0);
-  const scenario: Scenario | undefined = feature.scenarios.items.filter(
-    (item) => !item.isSkipped
-  )[scenarioIdx];
+  const scenario: DecodedScenario | undefined = feature.scenarios[scenarioIdx];
   useEffect(() => {
     // no more scenarios left
     if (!scenario) {
@@ -202,7 +199,7 @@ const RunFeature = ({
     <Box flexDirection="column">
       <Text bold>{scenario.title}</Text>
       <RunScenario
-        featureFilePath={feature.filePath}
+        featureFilePath={feature.featureFilePath}
         headless={headless}
         closeAfterFail={closeAfterFail}
         key={scenario.title}
@@ -217,8 +214,8 @@ const RunFeature = ({
 };
 
 type Scenario = Awaited<
-  ReturnType<typeof getAllFeatures>
->["features"][number]["scenarios"]["items"][number];
+  ReturnType<typeof parseAllFeatureFiles>
+>[number]["scenarios"][number];
 const RunScenario = ({
   featureFilePath,
   scenario,
@@ -228,7 +225,7 @@ const RunScenario = ({
   closeAfterFail,
 }: {
   featureFilePath: string;
-  scenario: Scenario;
+  scenario: DecodedScenario;
   onComplete: () => void;
   onFail: (data: { type: "failure"; message: string; image?: string }) => void;
   headless: boolean;
@@ -321,8 +318,10 @@ const RunStep = ({
   return <Text></Text>;
 };
 
-const ParseResultsDisplay = ({ features }: { features: Feature[] }) => {
-  const parseResults = getParseResults(features);
+const ParseResultsDisplay = ({ features }: { features: DecodedFeature[] }) => {
+  const feat = features.flatMap((feature) =>
+    feature.scenarios.flatMap((scenario) => scenario.steps.map((step) => step))
+  );
 
   if (parseResults.errors.length === 0) {
     return null; // Don't show anything if there are no errors
