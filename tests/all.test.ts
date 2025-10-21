@@ -1,13 +1,11 @@
 import { test, expect, beforeAll, afterAll } from "bun:test";
 import Bun from "bun";
-import {
-  getAllFeatures,
-  getFeature,
-} from "../packages/feature-parser/loadFeatures";
 import { runFeature } from "../packages/runner";
 import { serve } from "./mock-server";
-const allFeatures = await getAllFeatures();
 
+const featureFiles = getFeatureFiles();
+
+const allFeatures = await loadFeatures();
 beforeAll(async () => {
   server = serve();
   await serveRunning();
@@ -20,23 +18,11 @@ afterAll(async () => {
   await shutdownBrowsers();
 });
 
-const anyFocused = allFeatures.features.some((feature) =>
-  feature.scenarios.items.some((scenario) => scenario.isFocused)
-);
-for (const feature of allFeatures.features) {
+for (const feature of await parseFeatures(allFeatures)) {
   test(feature.title, async () => {
     if (feature.skipReason) {
       console.log(chalk.yellow("⏭️  Skipping feature (skip):"), feature.title);
       return;
-    }
-    if (anyFocused) {
-      if (feature.skipReason === "other-feature-focused") {
-        console.log(
-          chalk.yellow("⏭️  Skipping feature (not focused):"),
-          feature.title
-        );
-        return;
-      }
     }
     const result = await runFeature(
       {
@@ -90,10 +76,10 @@ for (const feature of allFeatures.features) {
     if (failedScenarios.length > 0) {
       // Check if any failed scenarios were expected to fail
       const unexpectedFailures = failedScenarios.filter((failedScenario) => {
-        const scenarioDef = feature.scenarios.items.find(
+        const scenarioDef = feature.scenarios.find(
           (s) => s.title === failedScenario.title
         );
-        return !scenarioDef?.shouldFail;
+        return !scenarioDef?.parsed_annotations.includes("shouldfail");
       });
 
       if (unexpectedFailures.length === 0) {
@@ -135,6 +121,9 @@ let server = null as Bun.Server<undefined> | null;
 
 import chalk from "chalk";
 import { shutdownBrowsers } from "../packages/step-library/steps";
+import { getFeatureFiles } from "../packages/feature-parser/yadda-parser";
+import { loadFeatures } from "./loadFeatures";
+import { parseFeatures } from "../packages/feature-parser/parser-flow";
 const serveRunning = async () => {
   console.log(chalk.blue("Serving mock server"));
   const response = await fetch("http://localhost:3000/");

@@ -2,7 +2,6 @@
 // ideally it just returns the features
 
 import { findBestStep } from "../step-library/steps";
-import { type DecodedFeature } from "./yadda-parser";
 import { suggestMostLikelyMatches } from "../step-parser/suggest-most-likely-matches";
 
 export const getParseResults = (features: DecodedFeature[]): ParseResults => {
@@ -52,6 +51,7 @@ export type ParseResults = {
 };
 
 import { z } from "zod";
+import type { DecodedFeature } from "./parser-flow";
 
 export const AnnotationsRecordSchema = z.object({
   focus: z.literal(true).optional(),

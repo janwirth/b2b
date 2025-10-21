@@ -11,7 +11,7 @@ export type InferStep<T extends Record<string, any>> = {
 export type ParseSuccess<T, Output> = {
   type: "success";
   args: T;
-  execute: (context: Context) => Promise<Output>;
+  execute: (context: Context) => Promise<{ type: "success" }>;
 };
 
 export type ParseFailure = {

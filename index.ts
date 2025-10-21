@@ -5,7 +5,6 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import Bun from "bun";
 import { mkdir } from "fs/promises";
-import { parseAllFeatureFiles } from "./packages/feature-parser/yadda-parser";
 import { rm } from "fs/promises";
 import chalk from "chalk";
 import { start_interactive } from "./packages/watch-mode";
@@ -28,6 +27,8 @@ import {
 } from "./packages/step-library/steps";
 import { runFeature } from "./packages/runner";
 import { dir_exists } from "./dir_exists";
+import { loadFeatures } from "./tests/loadFeatures";
+import { parseFeatures } from "./packages/feature-parser/parser-flow";
 
 program
   .command("init")
@@ -87,9 +88,10 @@ program
   .command("run")
   .description("Run all tests")
   .action(async () => {
-    const features = await parseAllFeatureFiles();
-    for (const feature of features) {
-      await runFeature(feature, {
+    const features = await loadFeatures();
+    const parsedFeatures = await parseFeatures(features);
+    for (const feature of parsedFeatures) {
+      const result = await runFeature(feature, {
         onUpdate: (update) => {
           switch (update.type) {
             case "feature_started":
@@ -110,6 +112,17 @@ program
           }
         },
       });
+      if (!result.success) {
+        console.error(chalk.red("  Feature failed: "), feature.title);
+        const failedScenarios = result.scenarios.map((scenario) => {
+          if (scenario.result.type === "runner_error") {
+            return `${scenario.title}: ${scenario.result.message}`;
+          }
+          return null;
+        });
+        console.log(chalk.yellow(`${failedScenarios.join("\n")}`));
+        process.exit(1);
+      }
     }
   });
 
@@ -121,7 +134,6 @@ program
   });
 // Default action when no command is specified (equivalent to 'run')
 program.action(async () => {
-  const features = await parseAllFeatureFiles();
   console.log(program.help());
   // TODO: Implement test execution logic
 });

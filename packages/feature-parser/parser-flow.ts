@@ -4,17 +4,14 @@ import {
   AnnotationsSchema,
   type AllowedAnnotations,
   type FeatureSkipReason,
+  type ScenarioSkipReason,
 } from "./loadFeatures";
 import { parseFeature, type YaddaFeatureExport } from "./yadda-parser";
-import type {
-  DecodedScenario,
-  YaddaAnnotations,
-  YaddaScenarioExport,
-} from "./yadda-parser";
+import type { YaddaAnnotations, YaddaScenarioExport } from "./yadda-parser";
 import {
   determineFeatureSkipReason,
   determineScenarioSkipReason,
-} from "./skipreason.test";
+} from "./skipreason";
 
 const parseAnnotations = <T extends { annotations: YaddaAnnotations }>(
   yaddaAnnotated: T
@@ -51,7 +48,9 @@ const annotateList = <T extends YaddaAnnotatedList<T>>(
   });
 };
 
-const pipeline = async (files: { filePath: string; content: string }[]) => {
+export const parseFeatures = async (
+  files: { filePath: string; content: string }[]
+) => {
   const parsed_ = await Promise.all(
     files.map((x) => {
       return {
@@ -64,54 +63,62 @@ const pipeline = async (files: { filePath: string; content: string }[]) => {
   // ensure all exist and parse yadda flags
   const parsed = parsed_.flatMap((x) => {
     if (x.parsed !== null) {
-      return {
-        parsed: parseAnnotations({
-          ...x.parsed,
-          scenarios: x.parsed.scenarios.map(parseAnnotations),
-        }),
+      return parseAnnotations({
+        ...x.parsed,
         filePath: x.filePath,
-      };
+        scenarios: x.parsed.scenarios.map(parseAnnotations),
+      });
     }
     return [];
   });
   // with skip reasons
-  const withSkipReasons = parsed.map((x) => {
+  const withSkipReasons: DecodedFeature[] = parsed.map((x) => {
     const otherFeatures = parsed.filter((y) => y.filePath !== x.filePath);
     const otherFeaturesAnnotations = otherFeatures.flatMap(
-      (y) => y.parsed.parsed_annotations
+      (y) => y.parsed_annotations
     );
+    const scenarios: DecodedScenario[] = x.scenarios.map((y) => {
+      const otherScenarios = x.scenarios.filter((z) => z.title !== y.title);
+      const otherScenariosAnnotations = otherScenarios.map(
+        (z) => z.parsed_annotations
+      );
+      return {
+        ...y,
+        isFocused: y.parsed_annotations.includes("focus"),
+        skipReason: determineScenarioSkipReason({
+          annotations: y.parsed_annotations,
+          otherScenarios: otherScenariosAnnotations,
+          otherFeatures: otherFeaturesAnnotations,
+        }),
+      };
+    });
     return {
       ...x,
       skipReason: determineFeatureSkipReason({
-        annotations: x.parsed.parsed_annotations,
+        annotations: x.parsed_annotations,
         otherFeatures: otherFeaturesAnnotations,
       }),
-      scenarios: x.parsed.scenarios.map((y) => {
-        const otherScenarios = x.parsed.scenarios.filter(
-          (z) => z.title !== y.title
-        );
-        const otherScenariosAnnotations = otherScenarios.map(
-          (z) => z.parsed_annotations
-        );
-        return {
-          ...y,
-          skipReason: determineScenarioSkipReason({
-            annotations: y.parsed_annotations,
-            otherScenarios: otherScenariosAnnotations,
-            otherFeatures: otherFeaturesAnnotations,
-          }),
-        };
-      }),
+      isFocused: x.parsed_annotations.includes("focus"),
+      scenarios,
     };
   });
   return withSkipReasons;
 };
 // where we want to end up
 
-type DecodedFeature = {
+export type DecodedFeature = {
   title: string;
-  annotations: AllowedAnnotations[];
+  parsed_annotations: AllowedAnnotations[];
   skipReason: FeatureSkipReason | null;
   isFocused: boolean;
   scenarios: DecodedScenario[];
-}[];
+  filePath: string;
+};
+import { z } from "zod";
+
+export type DecodedScenario = {
+  title: string;
+  parsed_annotations: z.infer<typeof AnnotationsSchema>;
+  skipReason: ScenarioSkipReason | null;
+  steps: string[];
+};

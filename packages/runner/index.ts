@@ -5,7 +5,7 @@ import {
   type StepSuccess,
   type StepFailure,
 } from "../step-library/steps";
-import type { Feature } from "../feature-parser/loadFeatures";
+import type { DecodedFeature } from "../feature-parser/parser-flow";
 
 export type RunnerUpdate =
   | { type: "feature_started"; featureTitle: string }
@@ -119,7 +119,7 @@ const runScenario = async (
 };
 
 export const runFeature = async (
-  feature: Feature,
+  feature: DecodedFeature,
   options: RunnerOptions = {}
 ): Promise<FeatureResult> => {
   const { headless = true, closeAfterFail = true, onUpdate } = options;
@@ -133,8 +133,8 @@ export const runFeature = async (
     onUpdate?.({ type: "feature_started", featureTitle: feature.title });
 
     // Filter out skipped scenarios
-    const activeScenarios = feature.scenarios.items.filter(
-      (scenario) => !scenario.isSkipped
+    const activeScenarios = feature.scenarios.filter(
+      (scenario) => !scenario.skipReason
     );
 
     const scenarioResults: Array<{ title: string; result: ScenarioResult }> =

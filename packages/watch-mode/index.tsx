@@ -8,11 +8,11 @@ import open from "open";
 import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
 import { findBestStep } from "../step-library/steps";
+import { parseFeatures } from "../feature-parser/parser-flow";
 import {
-  parseAllFeatureFiles,
+  type DecodedFeature,
   type DecodedScenario,
-} from "../feature-parser/yadda-parser";
-import { type DecodedFeature } from "../feature-parser/yadda-parser";
+} from "../feature-parser/parser-flow";
 import { useRunnerInput } from "./useRunnerInput";
 
 const useLatestFeatures = () => {
@@ -20,13 +20,12 @@ const useLatestFeatures = () => {
     { type: "loaded"; features: DecodedFeature[] } | { type: "pending" }
   >({ type: "pending" });
   useEffect(() => {
-    parseAllFeatureFiles().then((features) =>
-      setParseResult({ type: "loaded", features })
-    );
+    const files = loadFeatures().then(parseFeatures);
+    files.then((features) => setParseResult({ type: "loaded", features }));
     const watcher = watch("features", (event, filename) => {
-      parseAllFeatureFiles().then((features) =>
-        setParseResult({ type: "loaded", features })
-      );
+      loadFeatures()
+        .then(parseFeatures)
+        .then((features) => setParseResult({ type: "loaded", features }));
     });
     return () => {
       watcher.close();
@@ -36,6 +35,10 @@ const useLatestFeatures = () => {
 };
 
 import { watch } from "fs";
+import { parseStep } from "@janwirth/b2b/packages/step-library/steps";
+import { getFeatureFiles } from "../feature-parser/yadda-parser";
+import { loadFeatures } from "../../tests/loadFeatures";
+import { getParseResults } from "../feature-parser/loadFeatures";
 
 const App = () => {
   const parseResult = useLatestFeatures();
@@ -199,7 +202,7 @@ const RunFeature = ({
     <Box flexDirection="column">
       <Text bold>{scenario.title}</Text>
       <RunScenario
-        featureFilePath={feature.featureFilePath}
+        featureFilePath={feature.filePath}
         headless={headless}
         closeAfterFail={closeAfterFail}
         key={scenario.title}
@@ -213,9 +216,6 @@ const RunFeature = ({
   );
 };
 
-type Scenario = Awaited<
-  ReturnType<typeof parseAllFeatureFiles>
->[number]["scenarios"][number];
 const RunScenario = ({
   featureFilePath,
   scenario,
@@ -322,6 +322,7 @@ const ParseResultsDisplay = ({ features }: { features: DecodedFeature[] }) => {
   const feat = features.flatMap((feature) =>
     feature.scenarios.flatMap((scenario) => scenario.steps.map((step) => step))
   );
+  const parseResults = getParseResults(features);
 
   if (parseResults.errors.length === 0) {
     return null; // Don't show anything if there are no errors
