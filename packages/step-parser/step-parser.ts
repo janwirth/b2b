@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { tokenize } from "./tokenize";
 import type { Context } from "../step-library/steps";
+import { R } from "@mobily/ts-belt";
 
 export type InferStep<T extends Record<string, any>> = {
   [K in keyof T as T[K] extends string ? never : K]: T[K] extends z.ZodTypeAny
@@ -8,18 +9,29 @@ export type InferStep<T extends Record<string, any>> = {
     : never;
 };
 
-export type ParseResult<T, Output> =
-  | { type: "success"; args: T; execute: (context: Context) => Promise<Output> }
-  | ParseFailure;
+export type ParseSuccess<T, Output> = {
+  args: T;
+  execute: (context: Context) => Promise<Output>;
+};
+
 export type ParseFailure = {
-  type: "fail";
   expected: string;
   actual: string;
   parsed_so_far: { key: string; value: any }[];
   input: string;
 };
 
-export type ParserTypes = string | z.ZodString | z.ZodURL;
+export type ParseResult<T, Output> = R.Result<
+  ParseSuccess<T, Output>,
+  ParseFailure
+>;
+
+export type ParserTypes =
+  | string
+  | z.ZodString
+  | z.ZodURL
+  | z.ZodTransform<any, any>;
+// | z.ZodEffects<any, any>;
 export type Step<T extends Record<string, ParserTypes>, Output> = {
   description: string;
   parse: (step: string) => ParseResult<InferStep<T>, Output>;
@@ -53,24 +65,22 @@ export function step<T extends Record<string, ParserTypes>, Output>(
 
       // Check if we've run out of tokens
       if (token === undefined) {
-        return {
-          type: "fail",
+        return R.Error({
           expected: `${parsers.length} tokens`,
           actual: `${tokens.length} tokens`,
           parsed_so_far,
           input: step,
-        };
+        });
       }
 
       // Check if we've run out of parsers
       if (parserEntry === undefined) {
-        return {
-          type: "fail",
+        return R.Error({
           expected: `${parsers.length} tokens`,
           actual: `${tokens.length} tokens`,
           parsed_so_far,
           input: step,
-        };
+        });
       }
 
       const [key, parser] = parserEntry;
@@ -97,24 +107,22 @@ export function step<T extends Record<string, ParserTypes>, Output>(
           }
         }
 
-        return {
-          type: "fail",
+        return R.Error({
           expected: expected,
           actual: token,
           parsed_so_far,
           input: step,
-        };
+        });
       }
 
       result[key] = parseResult.data;
       parsed_so_far.push({ key, value: parseResult.data });
     }
 
-    return {
-      type: "success",
+    return R.Ok({
       args: result as InferStep<T>,
       execute: (context: Context) => execute(result as InferStep<T>, context),
-    };
+    });
   };
 
   return { description, parse };

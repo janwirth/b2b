@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import { parseStep, type Context } from "../step-library/steps";
 import type { Feature } from "../feature-parser/loadFeatures";
+import { R } from "@mobily/ts-belt";
 
 export type RunnerUpdate =
   | { type: "feature_started"; featureTitle: string }
@@ -40,15 +41,20 @@ const runScenario = async (
     onUpdate?.({ type: "step_started", step });
 
     const parsed = parseStep(step);
-    if (parsed.type === "Err") {
+    if ("type" in parsed && parsed.type === "Err") {
       throw new RunnerError(parsed.step, scenario.title, step);
     }
 
-    const result = await parsed.execute(context);
+    const result = await R.getExn(parsed).execute(context);
 
-    if (result.type === "failure") {
+    if (R.isError(result)) {
+      const failure = R.getExn(result) as {
+        type: "failure";
+        message: string;
+        image?: string;
+      };
       // Take screenshot on failure
-      const screenshot_path = `./failure/${scenario.title}.png`;
+      const screenshot_path = `./failure/${scenario.title}.png` as const;
       try {
         await fs.mkdir("./failure", { recursive: true });
       } catch (e) {
@@ -60,7 +66,7 @@ const runScenario = async (
       });
 
       throw new RunnerError(
-        result.message,
+        failure.message,
         scenario.title,
         step,
         screenshot_path

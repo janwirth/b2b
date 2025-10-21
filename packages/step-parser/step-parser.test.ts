@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { expect, test } from "bun:test";
-import { step, type ParseFailure, type ParseResult } from "./step-parser";
-import { parseStep } from "../step-library/steps";
-import { A } from "@mobily/ts-belt";
-import { tokenize } from "./tokenize";
+import { step } from "./step-parser";
 
 const I = "I";
 const write = "write";

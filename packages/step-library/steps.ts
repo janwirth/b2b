@@ -14,8 +14,10 @@ import {
   step,
   type ParseFailure,
   type ParseResult,
+  type ParseSuccess,
   type Step,
 } from "../step-parser";
+import { R } from "@mobily/ts-belt";
 import { ocrImageAtUrl } from "./ocr";
 import { inputSelector, selectXPath, assertUnreachable } from "./selectors";
 import { existsSync, readFileSync } from "node:fs";
@@ -30,9 +32,9 @@ export type Context = {
   featureFilePath: string;
 };
 
-export type StepResult =
-  | { type: "success" }
-  | { type: "failure"; image?: string; message: string };
+export type StepSuccess = { type: "success" };
+export type StepFailure = { type: "failure"; image?: string; message: string };
+export type StepResult = R.Result<StepSuccess, StepFailure>;
 
 // Helper functions
 const timeout = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -145,7 +147,7 @@ export const steps = {
     async ({ query }, context) => {
       const [browser, page] = await ensurePage(context, true);
       await page?.type('input[type="search"]', query);
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -164,13 +166,16 @@ export const steps = {
       try {
         await page?.goto(copied);
       } catch (e) {
-        throw new Error(`Could not open link from clipboard:
+        return R.Error({
+          type: "failure",
+          message: `Could not open link from clipboard:
           the URL is '${copied}'
          
 ${(e as Error).message}
-          `);
+          `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -199,15 +204,19 @@ ${(e as Error).message}
               .toLowerCase()
               .includes(cleanStringArgs(text).toLowerCase())
           ) {
-            return { type: "success" };
+            return R.Ok({ type: "success" });
           } else {
-            throw new Error(
-              `input ${label} does not contain ${text}: ${textValue}`
-            );
+            return R.Error({
+              type: "failure",
+              message: `input ${label} does not contain ${text}: ${textValue}`,
+            });
           }
         } catch (e) {}
       }
-      throw new Error(`Could not find input ${inputSelector(label)}`);
+      return R.Error({
+        type: "failure",
+        message: `Could not find input ${inputSelector(label)}`,
+      });
     }
   ),
 
@@ -228,13 +237,16 @@ ${(e as Error).message}
           // visible: true,
         });
       } catch (e) {
-        throw new Error(`can not find '${txt}'
+        return R.Error({
+          type: "failure",
+          message: `can not find '${txt}'
 
 ${selectXPath({ searchTerm: txt })}
 
-        `);
+        `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -254,9 +266,12 @@ ${selectXPath({ searchTerm: txt })}
       const [browser, page] = await ensurePage(context, true);
       const title = await page.title();
       if (title.includes(text)) {
-        return { type: "success" };
+        return R.Ok({ type: "success" });
       } else {
-        throw new Error(`title does not contain '${text}':\n${title}`);
+        return R.Error({
+          type: "failure",
+          message: `title does not contain '${text}':\n${title}`,
+        });
       }
     }
   ),
@@ -278,9 +293,12 @@ ${selectXPath({ searchTerm: txt })}
           timeout: 500,
         });
       } catch (e) {
-        return { type: "success" };
+        return R.Ok({ type: "success" });
       }
-      throw new Error(`can see '${text.trim()}' but should not`);
+      return R.Error({
+        type: "failure",
+        message: `can see '${text.trim()}' but should not`,
+      });
     }
   ),
 
@@ -317,16 +335,18 @@ ${selectXPath({ searchTerm: txt })}
         //   { timeout: 100 }
         // );
       } catch (e) {
-        throw new Error(
-          `can not click on '` +
+        return R.Error({
+          type: "failure",
+          message:
+            `can not click on '` +
             txt__ +
             `'
   
     ${(e as Error).message}
-    `
-        );
+    `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -344,13 +364,16 @@ ${selectXPath({ searchTerm: txt })}
         await page.goto(normalized, { waitUntil: "networkidle2" });
         // await page.waitForNetworkIdle();
       } catch (e) {
-        throw new Error(`Could not open link:
+        return R.Error({
+          type: "failure",
+          message: `Could not open link:
           the URL is '${normalized}'
          
 ${(e as Error).message}
-          `);
+          `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -370,11 +393,14 @@ ${(e as Error).message}
         timeout: 1000,
       });
       if (!input) {
-        throw new Error(`Could not find input ${inputSelector(sel)}`);
+        return R.Error({
+          type: "failure",
+          message: `Could not find input ${inputSelector(sel)}`,
+        });
       }
       await input.click({ clickCount: 3 });
       await input.type(text.replaceAll(/(^['"]|['"]$)/g, ""));
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -390,11 +416,14 @@ ${(e as Error).message}
       const [browser, page] = await ensurePage(context, true);
       const url = await page.url();
       if (!url.toLowerCase().includes(text)) {
-        throw new Error(`Url does not contain ${text}:
+        return R.Error({
+          type: "failure",
+          message: `Url does not contain ${text}:
             ${url}
-        `);
+        `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -413,13 +442,16 @@ ${(e as Error).message}
       const txt_ = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
 
       if (!content.toLowerCase().includes(txt_.toLowerCase())) {
-        throw new Error(`Image does not contain '${text}':\n${content}
+        return R.Error({
+          type: "failure",
+          message: `Image does not contain '${text}':\n${content}
 
 Instead we read:
 ${content}
-        `);
+        `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -439,20 +471,26 @@ ${content}
       try {
         const content_ = await ocrImageAtUrl(url_);
         if (content_.toLowerCase().includes(text.toLowerCase())) {
-          throw new Error(`Opengraph image contains '${text}':\n${content_}
+          return R.Error({
+            type: "failure",
+            message: `Opengraph image contains '${text}':\n${content_}
 
 Instead we read:
 ${content_}
-        `);
+        `,
+          });
         }
       } catch (e) {
-        throw new Error(`could not read image at url:
+        return R.Error({
+          type: "failure",
+          message: `could not read image at url:
 ${url_}
 
 ${(e as Error).message}
-        `);
+        `,
+        });
       }
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -473,7 +511,10 @@ ${(e as Error).message}
       const fileInput = await page.$('input[type="file"]');
 
       if (!fileInput) {
-        throw new Error(`Could not find file input element on the page`);
+        return R.Error({
+          type: "failure",
+          message: `Could not find file input element on the page`,
+        });
       }
 
       // Get the path relative to the feature file directoryuuukx
@@ -486,9 +527,12 @@ ${(e as Error).message}
         );
         filePath = `${featureDir}/${cleanFilename}`;
         await uploadFile(page, filePath);
-        return { type: "success" };
+        return R.Ok({ type: "success" });
       } else {
-        throw new Error("Feature file path not found");
+        return R.Error({
+          type: "failure",
+          message: "Feature file path not found",
+        });
       }
     }
   ),
@@ -498,12 +542,12 @@ ${(e as Error).message}
     {
       I,
       wait,
-      duration: z.string().transform((val) => parseInt(val)),
+      duration: z.string(),
       seconds,
     },
     async ({ duration }, context) => {
-      await timeout(duration * 1000);
-      return { type: "success" };
+      await timeout(parseInt(duration) * 1000);
+      return R.Ok({ type: "success" });
     }
   ),
 
@@ -518,7 +562,7 @@ ${(e as Error).message}
     async (_, context) => {
       const [browser, page] = await ensurePage(context, true);
       await page.reload({ waitUntil: "networkidle2" });
-      return { type: "success" };
+      return R.Ok({ type: "success" });
     }
   ),
 };
@@ -563,14 +607,22 @@ const uploadFile = async (page: Page, filePath: string) => {
 };
 
 // Find the best matching step definition
-export const parseStep = (stepString: string) => {
+export const parseStep = (
+  stepString: string
+):
+  | ParseResult<any, any>
+  | {
+      type: "Err";
+      step: string;
+      failedSteps: { parseResult: ParseFailure; step: Step<any, any> }[];
+    } => {
   let failedSteps: { parseResult: ParseFailure; step: Step<any, any> }[] = [];
   for (const [stepName, stepDef] of Object.entries(steps)) {
     const parseResult = stepDef.parse(stepString);
-    if (parseResult.type === "success") {
+    if (R.isOk(parseResult)) {
       return parseResult;
     }
-    failedSteps.push({ parseResult, step: stepDef });
+    failedSteps.push({ parseResult: R.getExn(parseResult), step: stepDef });
   }
   // log all the failed steps
   // console.error("Failed to parse step", failedSteps);
