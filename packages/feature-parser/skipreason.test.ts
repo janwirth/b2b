@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ParsedAnnotations, AllowedAnnotations } from "./loadFeatures";
+import type { AllowedAnnotations } from "./loadFeatures";
 test.only("determineSkipReason works correctly", () => {
   for (const [name, feature] of Object.entries(ExampleFeatures)) {
     const skipReasonA = determineFeatureSkipReason({
@@ -92,20 +92,20 @@ const determineScenarioSkipReason = ({
 
 type ExampleFeature<T extends Record<string, any>> = {
   input: {
-    A: {
-      annotations: AllowedAnnotations[];
-      scenarios?: AllowedAnnotations[][];
-    };
-    B: {
-      annotations: AllowedAnnotations[];
-      scenarios?: AllowedAnnotations[][];
-    };
+    A: FeatureInput;
+    B: FeatureInput;
   };
   output: {
     A: FeatureOutput;
     B: FeatureOutput;
   };
 };
+
+type FeatureInput = {
+  scenarios: AllowedAnnotations[][];
+  annotations: AllowedAnnotations[];
+};
+
 type FeatureOutput = {
   skipReason: FeatureSkipReason | null;
   isFocused: boolean;
@@ -133,8 +133,8 @@ const ExampleFeatures: Record<string, ExampleFeature<any>> = {
   },
   oneSkipped: {
     input: {
-      A: { annotations: ["skip"] },
-      B: { annotations: [] },
+      A: { scenarios: [], annotations: ["skip"] },
+      B: { scenarios: [], annotations: [] },
     },
     output: {
       A: {
@@ -143,7 +143,7 @@ const ExampleFeatures: Record<string, ExampleFeature<any>> = {
         scenarios: [],
       },
       B: {
-        skipReason: "other-feature-focused",
+        skipReason: null,
         isFocused: false,
         scenarios: [],
       },

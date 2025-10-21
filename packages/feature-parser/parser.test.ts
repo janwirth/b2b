@@ -1,6 +1,5 @@
 import { test, expect } from "bun:test";
 import { getAllFeatures, getFeature } from "./loadFeatures";
-import type { ParsedAnnotations, AllowedAnnotations } from "./loadFeatures";
 import fs from "fs";
 
 const featureDir = `./features`;

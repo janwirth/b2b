@@ -158,34 +158,6 @@ export const getAllFeatures = async (): Promise<GetAllFeaturesResult> => {
     features: activeFeatures,
   };
 };
-export type ParsedAnnotations = {
-  isSkipped: boolean;
-  isFocused: boolean;
-  shouldFail: boolean;
-};
-type WithRawAnnotations = {
-  annotations: YaddaAnnotations;
-};
-type ParseResult<T> = {
-  items: (T & ParsedAnnotations)[];
-  hasFocusedItem: boolean;
-};
-
-const parseAnnotations = <T extends WithRawAnnotations>(
-  rawItems: T[]
-): ParseResult<T & ParsedAnnotations> => {
-  const oneFocused = rawItems.some((item) => item.annotations.focus);
-  const items = rawItems.map((item) => {
-    const annotations = AnnotationsSchema.parse(item.annotations);
-    return {
-      ...item,
-      isSkipped: !!annotations.skip || (!!oneFocused && !annotations.focus),
-      isFocused: !!annotations.focus,
-      shouldFail: !!annotations.shouldfail,
-    };
-  });
-  return { items, hasFocusedItem: oneFocused };
-};
 import { z } from "zod";
 
 const AnnotationsSchema = z.object({
