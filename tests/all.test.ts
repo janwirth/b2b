@@ -23,12 +23,12 @@ afterAll(async () => {
 const anyFocused = allFeatures.features.some((feature) => feature.isFocused);
 for (const feature of allFeatures.features) {
   test(feature.title, async () => {
-    if (feature.isSkipped) {
+    if (feature.skipReason) {
       console.log(chalk.yellow("⏭️  Skipping feature (skip):"), feature.title);
       return;
     }
     if (anyFocused) {
-      if (!feature.isFocused) {
+      if (feature.skipReason === "other-feature-focused") {
         console.log(
           chalk.yellow("⏭️  Skipping feature (not focused):"),
           feature.title
@@ -36,45 +36,50 @@ for (const feature of allFeatures.features) {
         return;
       }
     }
-
     try {
-      await runFeature(feature, {
-        onUpdate: (update) => {
-          switch (update.type) {
-            case "feature_started":
-              console.log(
-                chalk.blue("🚀 Starting feature:"),
-                update.featureTitle
-              );
-              break;
-            case "scenario_started":
-              console.log(
-                chalk.cyan("  📋 Starting scenario:"),
-                update.scenarioTitle
-              );
-              break;
-            case "step_started":
-              console.log(chalk.gray("    ▶️  Starting step:"), update.step);
-              break;
-            case "step_completed":
-              console.log(chalk.green("    ✅ Completed step:"), update.step);
-              break;
-            case "scenario_completed":
-              console.log(
-                chalk.green("  ✅ Completed scenario:"),
-                update.scenarioTitle
-              );
-              break;
-            case "feature_completed":
-              console.log(
-                chalk.green("🎉 Completed feature:"),
-                update.featureTitle,
-                chalk.gray(`(${update.duration_ms}ms)`)
-              );
-              break;
-          }
+      await runFeature(
+        {
+          ...feature,
+          filePath: feature.filePath,
         },
-      });
+        {
+          onUpdate: (update) => {
+            switch (update.type) {
+              case "feature_started":
+                console.log(
+                  chalk.blue("🚀 Starting feature:"),
+                  update.featureTitle
+                );
+                break;
+              case "scenario_started":
+                console.log(
+                  chalk.cyan("  📋 Starting scenario:"),
+                  update.scenarioTitle
+                );
+                break;
+              case "step_started":
+                console.log(chalk.gray("    ▶️  Starting step:"), update.step);
+                break;
+              case "step_completed":
+                console.log(chalk.green("    ✅ Completed step:"), update.step);
+                break;
+              case "scenario_completed":
+                console.log(
+                  chalk.green("  ✅ Completed scenario:"),
+                  update.scenarioTitle
+                );
+                break;
+              case "feature_completed":
+                console.log(
+                  chalk.green("🎉 Completed feature:"),
+                  update.featureTitle,
+                  chalk.gray(`(${update.duration_ms}ms)`)
+                );
+                break;
+            }
+          },
+        }
+      );
     } catch (error) {
       console.error(chalk.red("❌ Feature failed:"), feature.title);
       if (error instanceof Error) {

@@ -1,34 +1,47 @@
 // This is the feature file parser
 // ideally it just returns the features
 
-import * as fs from "fs";
-import * as Yadda from "yadda";
 import { findBestStep } from "../step-library/steps";
-import type { SpecificationExport } from "yadda/lib/parsers/FeatureParser";
+import {
+  parseAllFeatureFiles,
+  type YaddaFeatureExport,
+  type YaddaAnnotations,
+} from "./yadda-parser";
 
-export const getFeature = (parsedFeatures: ParsedFeatures, name: string) =>
-  parsedFeatures.features.find((f) => f.title === name);
+export const getFeature = (
+  parsedFeatures: GetAllFeaturesResult,
+  name: string
+) => parsedFeatures.features.find((f) => f.title === name);
 
-export type Feature = ParsedFeatures["features"][number];
-
-export type ParsedFeatures = Awaited<ReturnType<typeof getAllFeatures>>;
-export const getAllFeatures = async () => {
-  const featureParser = new Yadda.parsers.FeatureParser();
-  const readFeatureFile = (
-    filePath: string
-  ): Promise<SpecificationExport & { filePath: string }> => {
-    return fs.promises.readFile(filePath, "utf8").then(async (text) => {
-      const res = featureParser.parse(text);
-      if (res) {
-        return { ...res, filePath };
-      } else {
-        throw new Error(`Could not parse ${filePath}`);
-      }
-    });
+type GetAllFeaturesResult = { features: Feature[] };
+type FeatureResult = {
+  title: string;
+  scenarios: {
+    items: (Scenario & ParsedAnnotations)[];
   };
-  const features = await Promise.all(
-    new Yadda.FeatureFileSearch("./features").list().map(readFeatureFile)
-  ).then((x) =>
+  skipReason: null | FeatureSkipReason;
+};
+
+export type Feature = FeatureResult & {
+  filePath: string;
+  scenarios: {
+    items: (Scenario & ParsedAnnotations)[];
+  };
+};
+type Scenario = {
+  title: string;
+  steps: string[];
+  skipReason: null | ScenarioSkipReason;
+  shouldFail: boolean;
+};
+type FeatureSkipReason = "other-feature-focused" | "feature-explicit-skip";
+type ScenarioSkipReason =
+  | FeatureSkipReason
+  | "other-scenario-focused"
+  | "scenario-explicit-skip";
+
+export const getAllFeatures = async (): Promise<GetAllFeaturesResult> => {
+  const features = await parseAllFeatureFiles().then((x) =>
     x.map((x) => ({
       ...x,
       scenarios: x.scenarios.map((y) => ({
@@ -37,28 +50,45 @@ export const getAllFeatures = async () => {
       })),
     }))
   );
-  const activeFeatures = parseAnnotations(features).items.map((feature) => ({
-    ...feature,
-    scenarios: parseAnnotations(
-      feature.scenarios.map((scen) => ({
-        ...scen,
-        parsedSteps: scen.steps.map(findBestStep),
-      }))
-    ),
-  }));
+  const activeFeatures: FeatureResult[] = parseAnnotations(features).items.map(
+    (feature) => ({
+      ...feature,
+      skipReason: feature.isSkipped
+        ? feature.isFocused
+          ? "other-feature-focused"
+          : "feature-explicit-skip"
+        : null,
+      scenarios: {
+        items: parseAnnotations(
+          feature.scenarios.map((scen) => ({
+            ...scen,
+            parsedSteps: scen.steps.map(findBestStep),
+          }))
+        ).items.map((scenario) => ({
+          ...scenario,
+          skipReason: scenario.isSkipped
+            ? scenario.isFocused
+              ? "other-scenario-focused"
+              : scenario.shouldFail
+              ? "scenario-explicit-skip"
+              : "other-feature-focused"
+            : null,
+        })),
+      },
+    })
+  );
   return {
     features: activeFeatures,
-    // debugging information as to what failed
-    parseResults: activeFeatures.flatMap((feat) =>
-      feat.scenarios.items.flatMap((scen) => scen.parsedSteps)
-    ),
   };
 };
-export type ParsedAnnotations = { isSkipped: boolean; isFocused: boolean };
-type WithRawAnnotations = Pick<
-  Yadda.parsers.FeatureParser.ScenarioExport,
-  "annotations"
->;
+export type ParsedAnnotations = {
+  isSkipped: boolean;
+  isFocused: boolean;
+  shouldFail: boolean;
+};
+type WithRawAnnotations = {
+  annotations: YaddaAnnotations;
+};
 type ParseResult<T> = {
   items: (T & ParsedAnnotations)[];
   hasFocusedItem: boolean;
@@ -66,16 +96,23 @@ type ParseResult<T> = {
 
 const parseAnnotations = <T extends WithRawAnnotations>(
   rawItems: T[]
-): ParseResult<T> => {
+): ParseResult<T & ParsedAnnotations> => {
   const oneFocused = rawItems.some((item) => item.annotations.focus);
   const items = rawItems.map((item) => {
-    const isFocused = item.annotations.focus;
-    const isSkipped = item.annotations.skip;
+    const annotations = AnnotationsSchema.parse(item.annotations);
     return {
       ...item,
-      isSkipped: !!isSkipped || (!!oneFocused && !isFocused),
-      isFocused: !!isFocused,
+      isSkipped: !!annotations.skip || (!!oneFocused && !annotations.focus),
+      isFocused: !!annotations.focus,
+      shouldFail: !!annotations.shouldFail,
     };
   });
   return { items, hasFocusedItem: oneFocused };
 };
+import { z } from "zod";
+
+const AnnotationsSchema = z.object({
+  focus: z.literal(true).optional(),
+  skip: z.literal(true).optional(),
+  shouldFail: z.literal(true).optional(),
+});
