@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { tokenize } from "./tokenize";
 import type { Context } from "../step-library/steps";
-import { type Result, type Success, type Failure } from "../result/result";
 
 export type InferStep<T extends Record<string, any>> = {
   [K in keyof T as T[K] extends string ? never : K]: T[K] extends z.ZodTypeAny
@@ -10,21 +9,23 @@ export type InferStep<T extends Record<string, any>> = {
 };
 
 export type ParseSuccess<T, Output> = {
+  type: "success";
   args: T;
   execute: (context: Context) => Promise<Output>;
 };
 
 export type ParseFailure = {
+  type: "failure";
+
   expected: string;
   actual: string;
   parsed_so_far: { key: string; value: any }[];
   input: string;
 };
 
-export type ParseResult<T, Output> = Result<
-  ParseSuccess<T, Output>,
-  ParseFailure
->;
+export type ParseResult<Input, Output> =
+  | ParseSuccess<Input, Output>
+  | ParseFailure;
 
 export type ParserTypes =
   | string
@@ -66,27 +67,25 @@ export function step<T extends Record<string, ParserTypes>, Output>(
       // Check if we've run out of tokens
       if (token === undefined) {
         return {
-          _tag: "Failure",
-          error: {
-            expected: `${parsers.length} tokens`,
-            actual: `${tokens.length} tokens`,
-            parsed_so_far,
-            input: step,
-          }
-        } as Failure<ParseFailure>;
+          type: "failure",
+
+          expected: `${parsers.length} tokens`,
+          actual: `${tokens.length} tokens`,
+          parsed_so_far,
+          input: step,
+        };
       }
 
       // Check if we've run out of parsers
       if (parserEntry === undefined) {
         return {
-          _tag: "Failure",
-          error: {
-            expected: `${parsers.length} tokens`,
-            actual: `${tokens.length} tokens`,
-            parsed_so_far,
-            input: step,
-          }
-        } as Failure<ParseFailure>;
+          type: "failure",
+
+          expected: `${parsers.length} tokens`,
+          actual: `${tokens.length} tokens`,
+          parsed_so_far,
+          input: step,
+        };
       }
 
       const [key, parser] = parserEntry;
@@ -114,14 +113,12 @@ export function step<T extends Record<string, ParserTypes>, Output>(
         }
 
         return {
-          _tag: "Failure",
-          error: {
-            expected: expected,
-            actual: token,
-            parsed_so_far,
-            input: step,
-          }
-        } as Failure<ParseFailure>;
+          type: "failure",
+          expected: expected,
+          actual: token,
+          parsed_so_far,
+          input: step,
+        };
       }
 
       result[key] = parseResult.data;
@@ -129,12 +126,10 @@ export function step<T extends Record<string, ParserTypes>, Output>(
     }
 
     return {
-      _tag: "Success",
-      value: {
-        args: result as InferStep<T>,
-        execute: (context: Context) => execute(result as InferStep<T>, context),
-      }
-    } as Success<ParseSuccess<InferStep<T>, Output>>;
+      type: "success",
+      args: result as InferStep<T>,
+      execute: (context: Context) => execute(result as InferStep<T>, context),
+    };
   };
 
   return { description, parse };

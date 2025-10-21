@@ -7,7 +7,7 @@ import open from "open";
 
 import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
-import { parseStep } from "../step-library/steps";
+import { findBestStep } from "../step-library/steps";
 import { getAllFeatures } from "../feature-parser/loadFeatures";
 import { suggestMostLikelyMatches } from "../step-parser/suggest-most-likely-matches";
 
@@ -296,7 +296,7 @@ const RunScenario = ({
     }
   }, [!!step]);
   if (step) {
-    const parsed = parseStep(step);
+    const parsed = findBestStep(step);
     if (parsed.type == "Err") {
       throw new Error(parsed.step);
     }
@@ -338,7 +338,7 @@ const RunScenario = ({
     return <Text>No more steps</Text>;
   }
 };
-type StepParseResult = ReturnType<typeof parseStep>;
+type StepParseResult = ReturnType<typeof findBestStep>;
 type ParsedStep = Exclude<StepParseResult, { type: "Err" }>;
 
 const RunStep = ({

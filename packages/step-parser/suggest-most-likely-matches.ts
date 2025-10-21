@@ -1,11 +1,11 @@
 import { tokenize } from "./tokenize";
-import { parseStep } from "../step-library/steps";
+import { findBestStep } from "../step-library/steps";
 import { A } from "@mobily/ts-belt";
 import chalk from "chalk";
 
 export const suggestMostLikelyMatches = (input: string): string => {
   const tokens = tokenize(input);
-  const result = parseStep(input);
+  const result = findBestStep(input);
   if (result.type === "success") {
     throw new Error("Expected fail");
   }

@@ -3,7 +3,7 @@
 
 import * as fs from "fs";
 import * as Yadda from "yadda";
-import { parseStep } from "../step-library/steps";
+import { findBestStep } from "../step-library/steps";
 import type { SpecificationExport } from "yadda/lib/parsers/FeatureParser";
 
 export const getFeature = (parsedFeatures: ParsedFeatures, name: string) =>
@@ -42,7 +42,7 @@ export const getAllFeatures = async () => {
     scenarios: parseAnnotations(
       feature.scenarios.map((scen) => ({
         ...scen,
-        parsedSteps: scen.steps.map(parseStep),
+        parsedSteps: scen.steps.map(findBestStep),
       }))
     ),
   }));

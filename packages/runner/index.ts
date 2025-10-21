@@ -1,7 +1,11 @@
 import fs from "fs/promises";
-import { parseStep, type Context, type StepSuccess, type StepFailure } from "../step-library/steps";
+import {
+  findBestStep,
+  type Context,
+  type StepSuccess,
+  type StepFailure,
+} from "../step-library/steps";
 import type { Feature } from "../feature-parser/loadFeatures";
-import { type Result, type Success, type Failure } from "../result/result";
 
 export type RunnerUpdate =
   | { type: "feature_started"; featureTitle: string }
@@ -25,47 +29,28 @@ export type RunnerError = {
   image?: string;
 };
 
+export type ScenarioSuccess = {
+  type: "success";
+  status: "ok";
+};
+
+export type ScenarioResult = ScenarioSuccess | RunnerError;
+
 const runScenario = async (
   scenario: { title: string; steps: string[] },
   context: Context,
   headless: boolean,
   onUpdate?: (update: RunnerUpdate) => void
-): Promise<Result<{ status: "ok" }, RunnerError>> => {
+): Promise<ScenarioResult> => {
   onUpdate?.({ type: "scenario_started", scenarioTitle: scenario.title });
 
   for (const step of scenario.steps) {
     onUpdate?.({ type: "step_started", step });
 
-    const parsed = parseStep(step);
-    if ("type" in parsed && parsed.type === "Err") {
-      return {
-        _tag: "Failure",
-        error: {
-          type: "runner_error",
-          message: parsed.step,
-          scenarioTitle: scenario.title,
-          step,
-        },
-      } as Failure<RunnerError>;
-    }
-
-    // At this point, parsed is guaranteed to be a ParseResult (Result type)
-    const parseResult = parsed as Result<any, any>;
-
-    if (parseResult._tag !== "Success") {
-      return {
-        _tag: "Failure",
-        error: {
-          type: "runner_error",
-          message: "Failed to parse step",
-          scenarioTitle: scenario.title,
-          step,
-        },
-      } as Failure<RunnerError>;
-    }
+    const bestStep = findBestStep(step);
 
     try {
-      const result = await parseResult.value.execute(context);
+      const result = await bestStep.execute(context);
 
       if (result.type === "failure") {
         // Take screenshot on failure
@@ -81,15 +66,12 @@ const runScenario = async (
         });
 
         return {
-          _tag: "Failure",
-          error: {
-            type: "runner_error",
-            message: result.message,
-            scenarioTitle: scenario.title,
-            step,
-            image: screenshot_path,
-          },
-        } as Failure<RunnerError>;
+          type: "runner_error",
+          message: result.message,
+          scenarioTitle: scenario.title,
+          step,
+          image: screenshot_path,
+        };
       }
 
       onUpdate?.({ type: "step_completed", step });
@@ -106,21 +88,16 @@ const runScenario = async (
       }
 
       return {
-        _tag: "Failure",
-        error: {
-          type: "runner_error",
-          message: `Step execution failed: ${errorMessage}`,
-          scenarioTitle: scenario.title,
-          step,
-        },
-      } as Failure<RunnerError>;
+        type: "runner_error",
+        message: `Step execution failed: ${errorMessage}`,
+        scenarioTitle: scenario.title,
+        step,
+      };
     }
   }
 
   onUpdate?.({ type: "scenario_completed", scenarioTitle: scenario.title });
-  return { _tag: "Success", value: { status: "ok" } } as Success<{
-    status: "ok";
-  }>;
+  return { type: "success", status: "ok" };
 };
 
 export const runFeature = async (
@@ -149,13 +126,12 @@ export const runFeature = async (
         headless,
         onUpdate
       );
-      if (scenarioResult._tag === "Failure") {
-        const error = scenarioResult.error;
+      if (scenarioResult.type === "runner_error") {
         // Clean up browser on error
         if (closeAfterFail) {
           await context.browser?.close();
         }
-        throw error;
+        throw scenarioResult;
       }
     }
 

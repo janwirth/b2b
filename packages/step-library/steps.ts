@@ -291,9 +291,13 @@ ${selectXPath({ searchTerm: txt })}
         console.log("doNotSee step looking for:", cleanText);
 
         try {
-          await page.waitForSelector(selectXPath({ searchTerm: cleanText }), {
-            timeout: 500,
-          });
+          const item = await page.waitForSelector(
+            selectXPath({ searchTerm: cleanText }),
+            {
+              timeout: 500,
+            }
+          );
+          console.log(await page.evaluate((el) => el.textContent, item));
           // If we reach here, the element was found, which means we CAN see it
           // This is a failure because we expected NOT to see it
           console.log("doNotSee step found element, returning error");
@@ -623,7 +627,7 @@ const uploadFile = async (page: Page, filePath: string) => {
 };
 
 // Find the best matching step definition
-export const parseStep = (
+export const findBestStep = (
   stepString: string
 ):
   | ParseResult<any, any>
@@ -635,18 +639,15 @@ export const parseStep = (
   let failedSteps: { parseResult: ParseFailure; step: Step<any, any> }[] = [];
   for (const [stepName, stepDef] of Object.entries(steps)) {
     const parseResult = stepDef.parse(stepString);
-    if (parseResult._tag === "Success") {
+    if (parseResult.type === "success") {
       return parseResult;
     }
-    failedSteps.push({ parseResult: parseResult.error, step: stepDef });
+    failedSteps.push({ parseResult: parseResult, step: stepDef });
   }
   // log all the failed steps
   // console.error("Failed to parse step", failedSteps);
   return { type: "Err" as const, step: stepString, failedSteps };
 };
-
-// Export types for compatibility
-// export type StepTypes = Exclude<ReturnType<typeof parseStep>, { type: "Err" }>;
 
 // Re-export utilities
 export { ocrImageAtUrl } from "./ocr";
