@@ -1,4 +1,3 @@
-@focus
 Feature: Read
 
 Scenario: Basic

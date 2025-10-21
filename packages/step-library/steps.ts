@@ -285,11 +285,11 @@ ${selectXPath({ searchTerm: txt })}
     },
     async ({ text }, context) => {
       try {
-        console.log("doNotSee step executing with text:", text);
+        // console.log("doNotSee step executing with text:", text);
         const [browser, page] = await ensurePage(context, true);
         await page.waitForNetworkIdle();
         const cleanText = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
-        console.log("doNotSee step looking for:", cleanText);
+        // console.log("doNotSee step looking for:", cleanText);
 
         try {
           const item = await page.waitForSelector(
@@ -302,7 +302,7 @@ ${selectXPath({ searchTerm: txt })}
           // console.log(await page.evaluate((el) => el.textContent, item));
           // If we reach here, the element was found, which means we CAN see it
           // This is a failure because we expected NOT to see it
-          console.log("doNotSee step found element, returning error");
+          // console.log("doNotSee step found element, returning error");
           return {
             type: "failure",
             message: `can see '${cleanText}' but should not`,
@@ -310,12 +310,12 @@ ${selectXPath({ searchTerm: txt })}
         } catch (e) {
           // Element was not found within timeout, which means we CANNOT see it
           // This is success because we expected NOT to see it
-          console.log("doNotSee step did not find element, returning success");
+          // console.log("doNotSee step did not find element, returning success");
           return { type: "success" };
         }
       } catch (error) {
         // Catch any other errors (browser issues, etc.)
-        console.log("doNotSee step caught error:", error);
+        // console.log("doNotSee step caught error:", error);
         return {
           type: "failure",
           message: `Error in doNotSee step: ${(error as Error).message}`,

@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import { getAllFeatures, getFeature } from "./loadFeatures";
+import type { ParsedAnnotations, AllowedAnnotations } from "./loadFeatures";
 import fs from "fs";
 
 const featureDir = `./features`;
@@ -130,41 +131,4 @@ test("All annotation types are properly parsed", async () => {
     (s) => s.title === "Should fail"
   );
   expect(shouldFailScenario?.shouldFail).toBe(true);
-});
-
-test("Focus behavior is consistent across all features", async () => {
-  const features = await getAllFeatures();
-
-  // Only one feature should not be skipped (the focused one)
-  const nonSkippedFeatures = features.features.filter(
-    (f) => f.skipReason === null
-  );
-  expect(nonSkippedFeatures).toHaveLength(1);
-  expect(nonSkippedFeatures[0].title).toBe("Read");
-
-  // All other features should be skipped
-  const skippedFeatures = features.features.filter(
-    (f) => f.skipReason !== null
-  );
-  expect(skippedFeatures).toHaveLength(features.features.length - 1);
-
-  // All skipped features should have the same skip reason
-  expect(
-    skippedFeatures.every((f) => f.skipReason === "feature-explicit-skip")
-  ).toBe(true);
-});
-
-test("Scenario skip logic respects feature focus", async () => {
-  const features = await getAllFeatures();
-  const readFeature = getFeature(features, "Read");
-
-  // In a focused feature, scenarios should not be skipped
-  expect(
-    readFeature?.scenarios.items.every((scenario) => !scenario.isSkipped)
-  ).toBe(true);
-
-  // Test a non-focused feature
-  const inputFeature = getFeature(features, "Input");
-  // Note: Since the feature is skipped, scenarios would also be skipped in practice
-  // but the parsing logic doesn't automatically skip scenarios when the feature is skipped
 });

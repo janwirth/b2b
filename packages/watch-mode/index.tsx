@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import React, { useEffect, useRef, useState } from "react";
 import { Badge, Spinner, UnorderedList } from "@inkjs/ui";
 import Image from "@inkkit/ink-image";
-import { Box, render, Text, useApp, useInput } from "ink";
+import { Box, render, Text } from "ink";
 import open from "open";
 
 import type { Context } from "../step-library/steps";
@@ -10,21 +10,21 @@ import { ErrorBoundary } from "./functional-error-boundary";
 import { findBestStep } from "../step-library/steps";
 import {
   getAllFeatures,
-  type ParsedFeatures,
+  type Feature,
+  getParseResults,
+  type GetAllFeaturesResult,
 } from "../feature-parser/loadFeatures";
-
-type Feature = Awaited<ReturnType<typeof getAllFeatures>>["features"][number];
+import { useRunnerInput } from "./useRunnerInput";
 
 const useLatestFeatures = () => {
   const [parseResult, setParseResult] = useState<
-    (ParsedFeatures & { type: "loaded" }) | { type: "pending" }
+    (GetAllFeaturesResult & { type: "loaded" }) | { type: "pending" }
   >({ type: "pending" });
   useEffect(() => {
     getAllFeatures().then((features) =>
       setParseResult({ type: "loaded", ...features })
     );
     const watcher = watch("features", (event, filename) => {
-      // console.log(`Detected ${event} in ${filename}`);
       getAllFeatures().then((features) =>
         setParseResult({ type: "loaded", ...features })
       );
@@ -51,24 +51,13 @@ const App = () => {
     );
   } else if (parseResult.type == "loaded") {
     return (
-      <Box flexDirection="column">
+      <Box gap={8}>
         <Runner
           onReloadFeature={() => {}}
           features={parseResult.features}
         ></Runner>
-        <Text>Parser Errors:</Text>
-        <UnorderedList>
-          {parseResult.parseResults.map((result) => {
-            if (result.type == "Err") {
-              return (
-                <UnorderedList.Item key={result.step}>
-                  <Text color="red">{result.step}</Text>
-                  {/* <Text color="red">{suggestMostLikelyMatches(result.step)}</Text> */}
-                </UnorderedList.Item>
-              );
-            }
-          })}
-        </UnorderedList>
+
+        <ParseResultsDisplay features={parseResult.features} />
       </Box>
     );
   }
@@ -82,53 +71,18 @@ const Runner = ({
   features: Feature[];
   onReloadFeature: () => void;
 }) => {
-  const [focus, setFocus] = useState(0);
-  const [featuresToRun, setFeaturesToRun] = useState<string[]>([]);
-  const [passedFeatures, setPassedFeatures] = useState<string[]>([]);
-  const [failedFeatures, setFailedFeatures] = useState<
-    { title: string; message: string; image?: string }[]
-  >([]);
-  const { exit } = useApp();
-  useInput((input, key) => {
-    if (input == "r") {
-      onReloadFeature();
-    }
-    if (input == "h") {
-      setHeadless(!headless);
-    }
-    if (input == "c") {
-      setCloseAfterFail(!closeAfterFail);
-    }
-    if (input == "q") {
-      exit();
-    }
-    if (input == "a") {
-      setFeaturesToRun(
-        features
-          .filter((f) => {
-            return !f.isSkipped && !passedFeatures.includes(f.title);
-          })
-          .map((f) => f.title)
-      );
-    }
-    if (key.upArrow) {
-      setFocus(Math.max(0, focus - 1));
-    }
-    if (key.downArrow) {
-      setFocus(Math.min(features.length - 1, focus + 1));
-    }
-    if (key.return) {
-      const selected = features[focus]?.title;
-      if (selected) {
-        setFeaturesToRun([selected, ...featuresToRun]);
-        setPassedFeatures(
-          [...passedFeatures].filter((feature) => feature != selected)
-        );
-      }
-    }
-  });
-  const [headless, setHeadless] = useState(true);
-  const [closeAfterFail, setCloseAfterFail] = useState(true);
+  const {
+    focus,
+    featuresToRun,
+    passedFeatures,
+    failedFeatures,
+    headless,
+    closeAfterFail,
+    addFailedFeature,
+    addPassedFeature,
+    removeFeatureFromRun,
+  } = useRunnerInput(features, onReloadFeature);
+
   const runningFeatures = featuresToRun.slice(0, 1);
   return (
     <Box flexDirection="column" gap={2}>
@@ -155,7 +109,7 @@ const Runner = ({
                   {failedFeatures
                     .map((f) => f.title)
                     .includes(feature.title) && <Badge color="red">fail</Badge>}
-                  {feature.isSkipped && <Badge color="beige">SKIP</Badge>}
+                  {<Badge color="beige">{feature.skipReason}</Badge>}
                   <Box flexDirection="column">
                     <Text>{feature.title}</Text>
 
@@ -165,20 +119,16 @@ const Runner = ({
                         headless={headless}
                         feature={feature}
                         onFail={({ message, image }) => {
-                          setFeaturesToRun(
-                            [...featuresToRun].filter((f) => f != feature.title)
-                          );
-
-                          setFailedFeatures([
-                            ...failedFeatures,
-                            { title: feature.title, message, image },
-                          ]);
+                          removeFeatureFromRun(feature.title);
+                          addFailedFeature({
+                            title: feature.title,
+                            message,
+                            image,
+                          });
                         }}
                         onPass={() => {
-                          setFeaturesToRun(
-                            [...featuresToRun].filter((f) => f != feature.title)
-                          );
-                          setPassedFeatures([...passedFeatures, feature.title]);
+                          removeFeatureFromRun(feature.title);
+                          addPassedFeature(feature.title);
                         }}
                       ></RunFeature>
                     )}
@@ -369,6 +319,38 @@ const RunStep = ({
     })();
   }, [idx]);
   return <Text></Text>;
+};
+
+const ParseResultsDisplay = ({ features }: { features: Feature[] }) => {
+  const parseResults = getParseResults(features);
+
+  if (parseResults.errors.length === 0) {
+    return null; // Don't show anything if there are no errors
+  }
+
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Text bold color="red">
+        Parse Errors:
+      </Text>
+      <UnorderedList>
+        {parseResults.errors.map((error, index) => (
+          <UnorderedList.Item key={index}>
+            <Box flexDirection="column" gap={1}>
+              <Box>
+                <Text color="red">{error.featureTitle}</Text>
+                <Text> → </Text>
+                <Text color="yellow">{error.scenarioTitle}</Text>
+                <Text> (step {error.stepIndex + 1})</Text>
+              </Box>
+              <Text color="gray">Step: {error.stepText}</Text>
+              <Text color="cyan">{error.suggestions}</Text>
+            </Box>
+          </UnorderedList.Item>
+        ))}
+      </UnorderedList>
+    </Box>
+  );
 };
 
 export const start_interactive = () => {
