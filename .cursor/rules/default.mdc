@@ -3,5 +3,7 @@ alwaysApply: true
 ---
 
 Use bun run test to run tests
+Use ts-belt utilities: Array helpers
+Do not use ts-belt: Result type
 Use assertUnreachable helper for switch case statements
 Do not make unnecessary changes

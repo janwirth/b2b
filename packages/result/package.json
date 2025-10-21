@@ -1,0 +1,7 @@
+{
+  "name": "@janwirth/b2b-result",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "result.ts",
+  "types": "result.ts"
+}

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { expect, test } from "bun:test";
 import { step } from "./step-parser";
-import { R } from "@mobily/ts-belt";
+import { type Result } from "../result/result";
 import { suggestMostLikelyMatches } from "./suggest-most-likely-matches";
 import { getError } from "./getError";
 
@@ -24,15 +24,15 @@ const search_for = step(
 
 test("step parser keyword workaround", () => {
   const result = search_for.parse("I search for 'Hello World'");
-  if (!R.isOk(result)) {
+  if (result._tag !== "Success") {
     throw new Error("Expected success");
   }
-  expect(R.isOk(result)).toBe(true);
+  expect(result._tag).toBe("Success");
 });
 
 test("step parser failure case", () => {
   const result = input_text.parse("I write the text into the input_name");
-  if (R.isOk(result)) {
+  if (result._tag === "Success") {
     throw new Error("Expected fail");
   }
   const error = getError(result);
@@ -47,32 +47,32 @@ test("step parser failure case", () => {
 
 test("step parser success case", () => {
   const result = input_text.parse("I write 'Hello World' into the bio");
-  if (!R.isOk(result)) {
+  if (result._tag !== "Success") {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result);
-  expect(R.isOk(result)).toBe(true);
+  const success = result.value;
+  expect(result._tag).toBe("Success");
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
 });
 
 test("Trim Given, when, then, and", () => {
   const result = input_text.parse("Given I write 'Hello World' into the bio");
-  if (!R.isOk(result)) {
+  if (result._tag !== "Success") {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result);
-  expect(R.isOk(result)).toBe(true);
+  const success = result.value;
+  expect(result._tag).toBe("Success");
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
   const result2 = input_text.parse(
     "And then I write 'Hello World' into the bio"
   );
-  if (!R.isOk(result2)) {
+  if (result2._tag !== "Success") {
     throw new Error("Expected success");
   }
-  const success2 = R.getExn(result2);
-  expect(R.isOk(result2)).toBe(true);
+  const success2 = result2.value;
+  expect(result2._tag).toBe("Success");
   expect(success2.args.text).toBe("Hello World");
   expect(success2.args.input_name).toBe("bio");
 });

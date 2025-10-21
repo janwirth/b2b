@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tokenize } from "./tokenize";
 import type { Context } from "../step-library/steps";
-import { R } from "@mobily/ts-belt";
+import { type Result, type Success, type Failure } from "../result/result";
 
 export type InferStep<T extends Record<string, any>> = {
   [K in keyof T as T[K] extends string ? never : K]: T[K] extends z.ZodTypeAny
@@ -21,7 +21,7 @@ export type ParseFailure = {
   input: string;
 };
 
-export type ParseResult<T, Output> = R.Result<
+export type ParseResult<T, Output> = Result<
   ParseSuccess<T, Output>,
   ParseFailure
 >;
@@ -65,22 +65,28 @@ export function step<T extends Record<string, ParserTypes>, Output>(
 
       // Check if we've run out of tokens
       if (token === undefined) {
-        return R.Error({
-          expected: `${parsers.length} tokens`,
-          actual: `${tokens.length} tokens`,
-          parsed_so_far,
-          input: step,
-        });
+        return {
+          _tag: "Failure",
+          error: {
+            expected: `${parsers.length} tokens`,
+            actual: `${tokens.length} tokens`,
+            parsed_so_far,
+            input: step,
+          }
+        } as Failure<ParseFailure>;
       }
 
       // Check if we've run out of parsers
       if (parserEntry === undefined) {
-        return R.Error({
-          expected: `${parsers.length} tokens`,
-          actual: `${tokens.length} tokens`,
-          parsed_so_far,
-          input: step,
-        });
+        return {
+          _tag: "Failure",
+          error: {
+            expected: `${parsers.length} tokens`,
+            actual: `${tokens.length} tokens`,
+            parsed_so_far,
+            input: step,
+          }
+        } as Failure<ParseFailure>;
       }
 
       const [key, parser] = parserEntry;
@@ -107,22 +113,28 @@ export function step<T extends Record<string, ParserTypes>, Output>(
           }
         }
 
-        return R.Error({
-          expected: expected,
-          actual: token,
-          parsed_so_far,
-          input: step,
-        });
+        return {
+          _tag: "Failure",
+          error: {
+            expected: expected,
+            actual: token,
+            parsed_so_far,
+            input: step,
+          }
+        } as Failure<ParseFailure>;
       }
 
       result[key] = parseResult.data;
       parsed_so_far.push({ key, value: parseResult.data });
     }
 
-    return R.Ok({
-      args: result as InferStep<T>,
-      execute: (context: Context) => execute(result as InferStep<T>, context),
-    });
+    return {
+      _tag: "Success",
+      value: {
+        args: result as InferStep<T>,
+        execute: (context: Context) => execute(result as InferStep<T>, context),
+      }
+    } as Success<ParseSuccess<InferStep<T>, Output>>;
   };
 
   return { description, parse };
