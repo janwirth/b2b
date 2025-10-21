@@ -45,35 +45,62 @@ const runScenario = async (
       throw new RunnerError(parsed.step, scenario.title, step);
     }
 
-    const result = await R.getExn(parsed).execute(context);
+    // At this point, parsed is guaranteed to be a ParseResult (Result type)
+    const parseResult = parsed as R.Result<any, any>;
 
-    if (R.isError(result)) {
-      const failure = R.getExn(result) as {
-        type: "failure";
-        message: string;
-        image?: string;
-      };
-      // Take screenshot on failure
-      const screenshot_path = `./failure/${scenario.title}.png` as const;
-      try {
-        await fs.mkdir("./failure", { recursive: true });
-      } catch (e) {
-        // Directory might already exist
+    try {
+      const result = R.getExn(parseResult).execute(context);
+
+      if (R.isError(result)) {
+        const failure = R.getExn(result) as {
+          type: "failure";
+          message: string;
+          image?: string;
+        };
+        // Take screenshot on failure
+        const screenshot_path = `./failure/${scenario.title}.png` as const;
+        try {
+          await fs.mkdir("./failure", { recursive: true });
+        } catch (e) {
+          // Directory might already exist
+        }
+
+        const screenshot = await context.page?.screenshot({
+          path: screenshot_path,
+        });
+
+        throw new RunnerError(
+          failure.message,
+          scenario.title,
+          step,
+          screenshot_path
+        );
       }
 
-      const screenshot = await context.page?.screenshot({
-        path: screenshot_path,
-      });
+      onUpdate?.({ type: "step_completed", step });
+    } catch (stepError) {
+      // If it's already a RunnerError, re-throw it
+      if (stepError instanceof RunnerError) {
+        throw stepError;
+      }
+
+      // Otherwise, wrap it with context
+      let errorMessage = "Unknown step error";
+      if (stepError instanceof Error) {
+        errorMessage =
+          stepError.message || stepError.name || "Error without message";
+      } else if (typeof stepError === "string") {
+        errorMessage = stepError;
+      } else if (stepError && typeof stepError === "object") {
+        errorMessage = JSON.stringify(stepError, null, 2);
+      }
 
       throw new RunnerError(
-        failure.message,
+        `Step execution failed: ${errorMessage}`,
         scenario.title,
-        step,
-        screenshot_path
+        step
       );
     }
-
-    onUpdate?.({ type: "step_completed", step });
   }
 
   onUpdate?.({ type: "scenario_completed", scenarioTitle: scenario.title });
@@ -100,7 +127,6 @@ export const runFeature = async (
 
     for (const scenario of activeScenarios) {
       await runScenario(scenario, context, headless, onUpdate);
-      console.log("scenario completed", scenario.title);
     }
 
     const duration_ms = Date.now() - startTime;
@@ -125,6 +151,15 @@ export const runFeature = async (
       throw error;
     }
 
-    throw new RunnerError((error as Error).message, "unknown", "unknown");
+    // Provide better error context for unknown errors
+    const errorMessage =
+      (error as Error)?.message || String(error) || "Unknown error occurred";
+    const errorStack = (error as Error)?.stack || "No stack trace available";
+
+    throw new RunnerError(
+      `${errorMessage}\n\nStack trace:\n${errorStack}`,
+      "unknown",
+      "unknown"
+    );
   }
 };

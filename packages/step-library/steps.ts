@@ -286,19 +286,38 @@ ${selectXPath({ searchTerm: txt })}
       text: z.string(),
     },
     async ({ text }, context) => {
-      const [browser, page] = await ensurePage(context, true);
-      await page.waitForNetworkIdle();
       try {
-        await page.waitForSelector(selectXPath({ searchTerm: text.trim() }), {
-          timeout: 500,
+        console.log("doNotSee step executing with text:", text);
+        const [browser, page] = await ensurePage(context, true);
+        await page.waitForNetworkIdle();
+        const cleanText = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
+        console.log("doNotSee step looking for:", cleanText);
+
+        try {
+          await page.waitForSelector(selectXPath({ searchTerm: cleanText }), {
+            timeout: 500,
+          });
+          // If we reach here, the element was found, which means we CAN see it
+          // This is a failure because we expected NOT to see it
+          console.log("doNotSee step found element, returning error");
+          return R.Error({
+            type: "failure",
+            message: `can see '${cleanText}' but should not`,
+          });
+        } catch (e) {
+          // Element was not found within timeout, which means we CANNOT see it
+          // This is success because we expected NOT to see it
+          console.log("doNotSee step did not find element, returning success");
+          return R.Ok({ type: "success" });
+        }
+      } catch (error) {
+        // Catch any other errors (browser issues, etc.)
+        console.log("doNotSee step caught error:", error);
+        return R.Error({
+          type: "failure",
+          message: `Error in doNotSee step: ${(error as Error).message}`,
         });
-      } catch (e) {
-        return R.Ok({ type: "success" });
       }
-      return R.Error({
-        type: "failure",
-        message: `can see '${text.trim()}' but should not`,
-      });
     }
   ),
 

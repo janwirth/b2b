@@ -3,3 +3,6 @@ alwaysApply: true
 ---
 
 Use bun run test to run tests
+Use ts-belt utilities: Result, Array
+Use assertUnreachable helper for switch case statements
+Do not make unnecessary changes

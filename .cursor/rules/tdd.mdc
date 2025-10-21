@@ -1,0 +1,11 @@
+---
+alwaysApply: false
+---
+
+# Test driven development
+
+Quick guide
+
+- Use bun run test to verify results
+- features directory for feature definitions
+- steps.ts for parsing
