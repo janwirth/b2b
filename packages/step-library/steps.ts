@@ -622,7 +622,7 @@ export const parseStep = (
     if (R.isOk(parseResult)) {
       return parseResult;
     }
-    failedSteps.push({ parseResult: R.getExn(parseResult), step: stepDef });
+    failedSteps.push({ parseResult: parseResult._0, step: stepDef });
   }
   // log all the failed steps
   // console.error("Failed to parse step", failedSteps);

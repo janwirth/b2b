@@ -33,7 +33,7 @@ test("step parser failure case", () => {
   if (R.isOk(result)) {
     throw new Error("Expected fail");
   }
-  const error = R.getExn(result) as any;
+  const error = result._0;
   expect(error.actual).toBe("text");
   expect(error.expected).toBe("into");
   expect(error.parsed_so_far).toEqual([
@@ -48,7 +48,7 @@ test("step parser success case", () => {
   if (!R.isOk(result)) {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result) as any;
+  const success = result._0;
   expect(R.isOk(result)).toBe(true);
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
@@ -59,7 +59,7 @@ test("Trim Given, when, then, and", () => {
   if (!R.isOk(result)) {
     throw new Error("Expected success");
   }
-  const success = R.getExn(result);
+  const success = result._0;
   expect(R.isOk(result)).toBe(true);
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
@@ -69,7 +69,7 @@ test("Trim Given, when, then, and", () => {
   if (!R.isOk(result2)) {
     throw new Error("Expected success");
   }
-  const success2 = R.getExn(result2);
+  const success2 = result2._0;
   expect(R.isOk(result2)).toBe(true);
   expect(success2.args.text).toBe("Hello World");
   expect(success2.args.input_name).toBe("bio");
