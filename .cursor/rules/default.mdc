@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Use bun run test to run tests

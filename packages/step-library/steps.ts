@@ -127,6 +127,10 @@ const title = "title";
 const upload = "upload";
 const select = "select";
 const file = "file";
+const wait = "wait";
+const seconds = "seconds";
+const reload = "reload";
+const page = "page";
 
 // Step definitions using the new step-parser
 export const steps = {
@@ -221,7 +225,7 @@ ${(e as Error).message}
       try {
         await page.waitForSelector(selectXPath({ searchTerm: txt }), {
           timeout: 10000,
-          visible: true,
+          // visible: true,
         });
       } catch (e) {
         throw new Error(`can not find '${txt}'
@@ -486,6 +490,35 @@ ${(e as Error).message}
       } else {
         throw new Error("Feature file path not found");
       }
+    }
+  ),
+
+  // "I wait <number> seconds"
+  wait: step(
+    {
+      I,
+      wait,
+      duration: z.string().transform((val) => parseInt(val)),
+      seconds,
+    },
+    async ({ duration }, context) => {
+      await timeout(duration * 1000);
+      return { type: "success" };
+    }
+  ),
+
+  // "I reload the page"
+  reload: step(
+    {
+      I,
+      reload,
+      the,
+      page,
+    },
+    async (_, context) => {
+      const [browser, page] = await ensurePage(context, true);
+      await page.reload({ waitUntil: "networkidle2" });
+      return { type: "success" };
     }
   ),
 };

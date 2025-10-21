@@ -6,5 +6,5 @@ Feature: File Upload
   Scenario: Upload CV file
     When I open localhost:3000
     Then I see "Hello World"
-    And when I upload "example-cv-jan-wirth.pdf"
+    And I select the file "example-cv-jan-wirth.pdf"
     Then I see "File uploaded successfully"
