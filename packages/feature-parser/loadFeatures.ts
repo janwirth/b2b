@@ -40,6 +40,36 @@ type ScenarioSkipReason =
   | "other-scenario-focused"
   | "scenario-explicit-skip";
 
+const transformFeaturesWithAnnotations = (
+  features: YaddaFeatureExport[]
+): Feature[] => {
+  return parseAnnotations(features).items.map((feature) => ({
+    ...feature,
+    skipReason: feature.isSkipped
+      ? feature.isFocused
+        ? "other-feature-focused"
+        : "feature-explicit-skip"
+      : null,
+    scenarios: {
+      items: parseAnnotations(
+        feature.scenarios.map((scen) => ({
+          ...scen,
+          parsedSteps: scen.steps.map(findBestStep),
+        }))
+      ).items.map((scenario) => ({
+        ...scenario,
+        skipReason: scenario.isSkipped
+          ? scenario.isFocused
+            ? "other-scenario-focused"
+            : scenario.shouldFail
+            ? "scenario-explicit-skip"
+            : "other-feature-focused"
+          : null,
+      })),
+    },
+  }));
+};
+
 export const getAllFeatures = async (): Promise<GetAllFeaturesResult> => {
   const features = await parseAllFeatureFiles().then((x) =>
     x.map((x) => ({
@@ -50,33 +80,7 @@ export const getAllFeatures = async (): Promise<GetAllFeaturesResult> => {
       })),
     }))
   );
-  const activeFeatures: FeatureResult[] = parseAnnotations(features).items.map(
-    (feature) => ({
-      ...feature,
-      skipReason: feature.isSkipped
-        ? feature.isFocused
-          ? "other-feature-focused"
-          : "feature-explicit-skip"
-        : null,
-      scenarios: {
-        items: parseAnnotations(
-          feature.scenarios.map((scen) => ({
-            ...scen,
-            parsedSteps: scen.steps.map(findBestStep),
-          }))
-        ).items.map((scenario) => ({
-          ...scenario,
-          skipReason: scenario.isSkipped
-            ? scenario.isFocused
-              ? "other-scenario-focused"
-              : scenario.shouldFail
-              ? "scenario-explicit-skip"
-              : "other-feature-focused"
-            : null,
-        })),
-      },
-    })
-  );
+  const activeFeatures: Feature[] = transformFeaturesWithAnnotations(features);
   return {
     features: activeFeatures,
   };

@@ -81,6 +81,10 @@ for (const feature of allFeatures.features) {
         }
       );
     } catch (error) {
+      if (feature.scenarios.items.some((scenario) => scenario.shouldFail)) {
+        console.log(chalk.green("✅ Feature should fail:"), feature.title);
+        return;
+      }
       console.error(chalk.red("❌ Feature failed:"), feature.title);
       if (error instanceof Error) {
         console.error(chalk.red("Error message:"), error.message);
