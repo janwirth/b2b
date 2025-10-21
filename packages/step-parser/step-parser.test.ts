@@ -2,6 +2,8 @@ import { z } from "zod";
 import { expect, test } from "bun:test";
 import { step } from "./step-parser";
 import { R } from "@mobily/ts-belt";
+import { suggestMostLikelyMatches } from "./suggest-most-likely-matches";
+import { getError } from "./getError";
 
 const I = "I";
 const write = "write";
@@ -33,7 +35,7 @@ test("step parser failure case", () => {
   if (R.isOk(result)) {
     throw new Error("Expected fail");
   }
-  const error = result._0;
+  const error = getError(result);
   expect(error.actual).toBe("text");
   expect(error.expected).toBe("into");
   expect(error.parsed_so_far).toEqual([
@@ -48,7 +50,7 @@ test("step parser success case", () => {
   if (!R.isOk(result)) {
     throw new Error("Expected success");
   }
-  const success = result._0;
+  const success = R.getExn(result);
   expect(R.isOk(result)).toBe(true);
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
@@ -59,7 +61,7 @@ test("Trim Given, when, then, and", () => {
   if (!R.isOk(result)) {
     throw new Error("Expected success");
   }
-  const success = result._0;
+  const success = R.getExn(result);
   expect(R.isOk(result)).toBe(true);
   expect(success.args.text).toBe("Hello World");
   expect(success.args.input_name).toBe("bio");
@@ -69,7 +71,7 @@ test("Trim Given, when, then, and", () => {
   if (!R.isOk(result2)) {
     throw new Error("Expected success");
   }
-  const success2 = result2._0;
+  const success2 = R.getExn(result2);
   expect(R.isOk(result2)).toBe(true);
   expect(success2.args.text).toBe("Hello World");
   expect(success2.args.input_name).toBe("bio");
@@ -82,5 +84,3 @@ test("Most likely matches", () => {
     `Most likely matches PASS IF LOOK GOOD: ${suggestMostLikelyMatches(input)}`
   );
 });
-import chalk from "chalk";
-import { suggestMostLikelyMatches } from "./suggest-most-likely-matches";

@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import { parseStep, type Context } from "../step-library/steps";
 import type { Feature } from "../feature-parser/loadFeatures";
 import { R } from "@mobily/ts-belt";
+import { getError } from "../step-parser/getError";
 
 export type RunnerUpdate =
   | { type: "feature_started"; featureTitle: string }
@@ -17,24 +18,20 @@ export type RunnerOptions = {
   onUpdate?: (update: RunnerUpdate) => void;
 };
 
-export class RunnerError extends Error {
-  constructor(
-    message: string,
-    public scenarioTitle: string,
-    public step: string,
-    public image?: string
-  ) {
-    super(message);
-    this.name = "RunnerError";
-  }
-}
+export type RunnerError = {
+  type: "runner_error";
+  message: string;
+  scenarioTitle: string;
+  step: string;
+  image?: string;
+};
 
 const runScenario = async (
   scenario: { title: string; steps: string[] },
   context: Context,
   headless: boolean,
   onUpdate?: (update: RunnerUpdate) => void
-): Promise<void> => {
+): Promise<R.Result<{ status: "ok" }, RunnerError>> => {
   onUpdate?.({ type: "scenario_started", scenarioTitle: scenario.title });
 
   for (const step of scenario.steps) {
@@ -42,7 +39,12 @@ const runScenario = async (
 
     const parsed = parseStep(step);
     if ("type" in parsed && parsed.type === "Err") {
-      throw new RunnerError(parsed.step, scenario.title, step);
+      return R.Error({
+        type: "runner_error",
+        message: parsed.step,
+        scenarioTitle: scenario.title,
+        step,
+      });
     }
 
     // At this point, parsed is guaranteed to be a ParseResult (Result type)
@@ -52,7 +54,7 @@ const runScenario = async (
       const result = R.getExn(parseResult).execute(context);
 
       if (R.isError(result)) {
-        const failure = R.getExn(result) as {
+        const failure = getError(result) as {
           type: "failure";
           message: string;
           image?: string;
@@ -69,22 +71,18 @@ const runScenario = async (
           path: screenshot_path,
         });
 
-        throw new RunnerError(
-          failure.message,
-          scenario.title,
+        return R.Error({
+          type: "runner_error",
+          message: failure.message,
+          scenarioTitle: scenario.title,
           step,
-          screenshot_path
-        );
+          image: screenshot_path,
+        });
       }
 
       onUpdate?.({ type: "step_completed", step });
     } catch (stepError) {
-      // If it's already a RunnerError, re-throw it
-      if (stepError instanceof RunnerError) {
-        throw stepError;
-      }
-
-      // Otherwise, wrap it with context
+      // Handle different error types
       let errorMessage = "Unknown step error";
       if (stepError instanceof Error) {
         errorMessage =
@@ -95,15 +93,17 @@ const runScenario = async (
         errorMessage = JSON.stringify(stepError, null, 2);
       }
 
-      throw new RunnerError(
-        `Step execution failed: ${errorMessage}`,
-        scenario.title,
-        step
-      );
+      return R.Error({
+        type: "runner_error",
+        message: `Step execution failed: ${errorMessage}`,
+        scenarioTitle: scenario.title,
+        step,
+      });
     }
   }
 
   onUpdate?.({ type: "scenario_completed", scenarioTitle: scenario.title });
+  return R.Ok({ status: "ok" }) as R.Result<{ status: "ok" }, never>;
 };
 
 export const runFeature = async (
@@ -126,7 +126,20 @@ export const runFeature = async (
     );
 
     for (const scenario of activeScenarios) {
-      await runScenario(scenario, context, headless, onUpdate);
+      const scenarioResult = await runScenario(
+        scenario,
+        context,
+        headless,
+        onUpdate
+      );
+      if (R.isError(scenarioResult)) {
+        const error = R.getExn(R.flip(scenarioResult));
+        // Clean up browser on error
+        if (closeAfterFail) {
+          await context.browser?.close();
+        }
+        throw error;
+      }
     }
 
     const duration_ms = Date.now() - startTime;
@@ -147,7 +160,12 @@ export const runFeature = async (
     }
 
     // Re-throw RunnerError as-is, wrap other errors
-    if (error instanceof RunnerError) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "type" in error &&
+      error.type === "runner_error"
+    ) {
       throw error;
     }
 
@@ -156,10 +174,11 @@ export const runFeature = async (
       (error as Error)?.message || String(error) || "Unknown error occurred";
     const errorStack = (error as Error)?.stack || "No stack trace available";
 
-    throw new RunnerError(
-      `${errorMessage}\n\nStack trace:\n${errorStack}`,
-      "unknown",
-      "unknown"
-    );
+    throw {
+      type: "runner_error",
+      message: `${errorMessage}\n\nStack trace:\n${errorStack}`,
+      scenarioTitle: "unknown",
+      step: "unknown",
+    };
   }
 };
