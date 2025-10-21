@@ -61,7 +61,11 @@ export const shutdownBrowsers = async () => {
 // Browser setup
 const ensurePage = async (context: Context, headless: boolean) => {
   if (!context.browser) {
-    context.browser = await puppeteer.launch({ headless });
+    // https://stackoverflow.com/questions/62220867/puppeteer-chromium-instances-remain-active-in-the-background-after-browser-disc
+    context.browser = await puppeteer.launch({
+      headless,
+      args: ["--no-sandbox", "--no-zygote"],
+    });
     browsers.push(context.browser);
     const bContext = context.browser.defaultBrowserContext();
     await bContext.overridePermissions("http://localhost:3000", [
@@ -124,6 +128,7 @@ const does = "does";
 const contain = "contain";
 const title = "title";
 const upload = "upload";
+const reads = "reads";
 const select = "select";
 const file = "file";
 const wait = "wait";
@@ -250,14 +255,10 @@ ${selectXPath({ searchTerm: txt })}
   // "I read the <text> in the browser tab"
   readInBrowserTab: step(
     {
-      I,
-      read,
-      text: z.string(),
-      in_,
       the,
-      browser,
       tab,
-      title,
+      reads,
+      text: z.string(),
     },
     async ({ text }, context) => {
       const [browser, page] = await ensurePage(context, true);
@@ -631,23 +632,36 @@ const uploadFile = async (page: Page, filePath: string) => {
 export const findBestStep = (
   stepString: string
 ):
-  | ParseResult<any, any>
+  | ParseSuccess<any, any>
   | {
       type: "Err";
       step: string;
-      failedSteps: { parseResult: ParseFailure; step: Step<any, any> }[];
+      failedStepDefinitionCandidates: {
+        parseResult: ParseFailure;
+        step: Step<any, any>;
+      }[];
     } => {
-  let failedSteps: { parseResult: ParseFailure; step: Step<any, any> }[] = [];
+  let failedStepDefinitionCandidates: {
+    parseResult: ParseFailure;
+    step: Step<any, any>;
+  }[] = [];
   for (const [stepName, stepDef] of Object.entries(steps)) {
     const parseResult = stepDef.parse(stepString);
     if (parseResult.type === "success") {
       return parseResult;
     }
-    failedSteps.push({ parseResult: parseResult, step: stepDef });
+    failedStepDefinitionCandidates.push({
+      parseResult: parseResult,
+      step: stepDef,
+    });
   }
   // log all the failed steps
-  // console.error("Failed to parse step", failedSteps);
-  return { type: "Err" as const, step: stepString, failedSteps };
+  // console.error("Failed to parse step", failedStepDefinitionCandidates);
+  return {
+    type: "Err" as const,
+    step: stepString,
+    failedStepDefinitionCandidates,
+  };
 };
 
 // Re-export utilities

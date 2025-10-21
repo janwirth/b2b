@@ -9,7 +9,7 @@ export const suggestMostLikelyMatches = (input: string): string => {
   if (result.type === "success") {
     throw new Error("Expected fail");
   }
-  const evaled = result.failedSteps.map((f) => {
+  const evaled = result.failedStepDefinitionCandidates.map((f) => {
     const candidate_tokens = tokenize(f.step.description);
     const intersection = A.intersection(tokens, candidate_tokens);
     const score = intersection.reduce(

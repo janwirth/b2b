@@ -8,36 +8,26 @@ import open from "open";
 import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
 import { findBestStep } from "../step-library/steps";
-import { getAllFeatures } from "../feature-parser/loadFeatures";
-import { suggestMostLikelyMatches } from "../step-parser/suggest-most-likely-matches";
+import {
+  getAllFeatures,
+  type ParsedFeatures,
+} from "../feature-parser/loadFeatures";
 
-const timeout = (ms: number) => new Promise((res) => setTimeout(res, ms));
-import chalk from "chalk";
-
-const loadFeatures = async () => {
-  const features = await getAllFeatures();
-  const errs = features.parseResults.filter((x) => x?.type == "Err");
-  if (errs.length) {
-    const err = `
-${chalk.red("Could not parse the following steps:")}
-${errs.map((x, idx) => `${suggestMostLikelyMatches(x.step)}`).join("\n")}
-`;
-    return { type: "parse-error" as const, message: err };
-  } else {
-    return { type: "loaded" as const, features };
-  }
-};
 type Feature = Awaited<ReturnType<typeof getAllFeatures>>["features"][number];
 
 const useLatestFeatures = () => {
   const [parseResult, setParseResult] = useState<
-    LoadFeaturesResult | { type: "pending" }
+    (ParsedFeatures & { type: "loaded" }) | { type: "pending" }
   >({ type: "pending" });
   useEffect(() => {
-    loadFeatures().then(setParseResult);
+    getAllFeatures().then((features) =>
+      setParseResult({ type: "loaded", ...features })
+    );
     const watcher = watch("features", (event, filename) => {
       // console.log(`Detected ${event} in ${filename}`);
-      loadFeatures().then(setParseResult);
+      getAllFeatures().then((features) =>
+        setParseResult({ type: "loaded", ...features })
+      );
     });
     return () => {
       watcher.close();
@@ -47,8 +37,6 @@ const useLatestFeatures = () => {
 };
 
 import { watch } from "fs";
-
-type LoadFeaturesResult = Awaited<ReturnType<typeof loadFeatures>>;
 
 const App = () => {
   const parseResult = useLatestFeatures();
@@ -61,14 +49,27 @@ const App = () => {
         <Text>Loading</Text>
       </Box>
     );
-  } else if (parseResult.type == "parse-error") {
-    return <Text>{parseResult.message}</Text>;
   } else if (parseResult.type == "loaded") {
     return (
-      <Runner
-        onReloadFeature={() => {}}
-        features={parseResult.features.features}
-      ></Runner>
+      <Box flexDirection="column">
+        <Runner
+          onReloadFeature={() => {}}
+          features={parseResult.features}
+        ></Runner>
+        <Text>Parser Errors:</Text>
+        <UnorderedList>
+          {parseResult.parseResults.map((result) => {
+            if (result.type == "Err") {
+              return (
+                <UnorderedList.Item key={result.step}>
+                  <Text color="red">{result.step}</Text>
+                  {/* <Text color="red">{suggestMostLikelyMatches(result.step)}</Text> */}
+                </UnorderedList.Item>
+              );
+            }
+          })}
+        </UnorderedList>
+      </Box>
     );
   }
 
@@ -130,7 +131,7 @@ const Runner = ({
   const [closeAfterFail, setCloseAfterFail] = useState(true);
   const runningFeatures = featuresToRun.slice(0, 1);
   return (
-    <Box flexDirection="column" gap={2} paddingTop={4} paddingBottom={4}>
+    <Box flexDirection="column" gap={2}>
       <Controls headless={headless} closeAfterFail={closeAfterFail}></Controls>
       <UnorderedList>
         {features.map((feature, index) => (
