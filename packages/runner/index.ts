@@ -36,6 +36,15 @@ export type ScenarioSuccess = {
 
 export type ScenarioResult = ScenarioSuccess | RunnerError;
 
+export type FeatureResult = {
+  duration_ms: number;
+  scenarios: Array<{
+    title: string;
+    result: ScenarioResult;
+  }>;
+  success: boolean;
+};
+
 const runScenario = async (
   scenario: { title: string; steps: string[] },
   context: Context,
@@ -50,6 +59,15 @@ const runScenario = async (
     const bestStep = findBestStep(step);
 
     try {
+      if (bestStep.type === "Err") {
+        return {
+          type: "runner_error",
+          message: `No matching step definition found for: "${step}"`,
+          scenarioTitle: scenario.title,
+          step,
+        };
+      }
+
       const result = await bestStep.execute(context);
 
       if (result.type === "failure") {
@@ -103,7 +121,7 @@ const runScenario = async (
 export const runFeature = async (
   feature: Feature,
   options: RunnerOptions = {}
-): Promise<{ duration_ms: number }> => {
+): Promise<FeatureResult> => {
   const { headless = true, closeAfterFail = true, onUpdate } = options;
 
   const startTime = Date.now();
@@ -119,6 +137,10 @@ export const runFeature = async (
       (scenario) => !scenario.isSkipped
     );
 
+    const scenarioResults: Array<{ title: string; result: ScenarioResult }> =
+      [];
+    let hasFailures = false;
+
     for (const scenario of activeScenarios) {
       const scenarioResult = await runScenario(
         scenario,
@@ -126,12 +148,15 @@ export const runFeature = async (
         headless,
         onUpdate
       );
+
+      scenarioResults.push({
+        title: scenario.title,
+        result: scenarioResult,
+      });
+
       if (scenarioResult.type === "runner_error") {
-        // Clean up browser on error
-        if (closeAfterFail) {
-          await context.browser?.close();
-        }
-        throw scenarioResult;
+        hasFailures = true;
+        // Continue running other scenarios instead of throwing
       }
     }
 
@@ -145,33 +170,37 @@ export const runFeature = async (
     // Clean up browser
     await context.browser?.close();
 
-    return { duration_ms };
+    return {
+      duration_ms,
+      scenarios: scenarioResults,
+      success: !hasFailures,
+    };
   } catch (error) {
     // Clean up browser on error
     if (closeAfterFail) {
       await context.browser?.close();
     }
 
-    // Re-throw RunnerError as-is, wrap other errors
-    if (
-      error &&
-      typeof error === "object" &&
-      "type" in error &&
-      error.type === "runner_error"
-    ) {
-      throw error;
-    }
-
-    // Provide better error context for unknown errors
+    // For unexpected errors, create a feature result with error information
+    const duration_ms = Date.now() - startTime;
     const errorMessage =
       (error as Error)?.message || String(error) || "Unknown error occurred";
     const errorStack = (error as Error)?.stack || "No stack trace available";
 
-    throw {
-      type: "runner_error",
-      message: `${errorMessage}\n\nStack trace:\n${errorStack}`,
-      scenarioTitle: "unknown",
-      step: "unknown",
+    return {
+      duration_ms,
+      scenarios: [
+        {
+          title: "unknown",
+          result: {
+            type: "runner_error",
+            message: `${errorMessage}\n\nStack trace:\n${errorStack}`,
+            scenarioTitle: "unknown",
+            step: "unknown",
+          },
+        },
+      ],
+      success: false,
     };
   }
 };

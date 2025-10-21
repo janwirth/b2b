@@ -108,7 +108,7 @@ const parseAnnotations = <T extends WithRawAnnotations>(
       ...item,
       isSkipped: !!annotations.skip || (!!oneFocused && !annotations.focus),
       isFocused: !!annotations.focus,
-      shouldFail: !!annotations.shouldFail,
+      shouldFail: !!annotations.shouldfail,
     };
   });
   return { items, hasFocusedItem: oneFocused };
@@ -118,5 +118,5 @@ import { z } from "zod";
 const AnnotationsSchema = z.object({
   focus: z.literal(true).optional(),
   skip: z.literal(true).optional(),
-  shouldFail: z.literal(true).optional(),
+  shouldfail: z.literal(true).optional(),
 });
