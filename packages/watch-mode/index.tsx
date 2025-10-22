@@ -7,7 +7,7 @@ import open from "open";
 
 import type { Context } from "../step-library/steps";
 import { ErrorBoundary } from "./functional-error-boundary";
-import { findBestStep } from "../step-library/steps";
+import { assertUnreachable, findBestStep } from "../step-library/steps";
 import { parseFeatures } from "../feature-parser/parser-flow";
 import {
   type DecodedFeature,
@@ -39,6 +39,7 @@ import { parseStep } from "@janwirth/b2b/packages/step-library/steps";
 import { getFeatureFiles } from "../feature-parser/yadda-parser";
 import { loadFeatures } from "../../tests/loadFeatures";
 import { getParseResults } from "../feature-parser/loadFeatures";
+import { runScenario } from "../runner/runScenario";
 
 const App = () => {
   const parseResult = useLatestFeatures();
@@ -202,11 +203,11 @@ const RunFeature = ({
     <Box flexDirection="column">
       <Text bold>{scenario.title}</Text>
       <RunScenario
-        featureFilePath={feature.filePath}
+        feature={feature}
+        scenario={scenario}
         headless={headless}
         closeAfterFail={closeAfterFail}
         key={scenario.title}
-        scenario={scenario}
         onComplete={() => setScenarioIdx(scenarioIdx + 1)}
         onFail={async (fail) => {
           onFail({ ...fail });
@@ -217,107 +218,55 @@ const RunFeature = ({
 };
 
 const RunScenario = ({
-  featureFilePath,
+  feature,
   scenario,
   onComplete,
   onFail,
   headless,
   closeAfterFail,
 }: {
-  featureFilePath: string;
+  feature: DecodedFeature;
   scenario: DecodedScenario;
   onComplete: () => void;
   onFail: (data: { type: "failure"; message: string; image?: string }) => void;
   headless: boolean;
   closeAfterFail: boolean;
 }) => {
-  const context = useRef<Context>({
-    featureFilePath,
-  });
-  const [stepIdx, setStepIdx] = useState(0);
-  const step: string | undefined = scenario.steps[stepIdx];
+  const [status, setStatus] = useState(`Starting scenario ${scenario.title}`);
   useEffect(() => {
-    // no more steps left
-    if (!step) {
-      context.current.recorder?.stop();
-      context.current.browser?.close();
-      onComplete();
-    }
-  }, [!!step]);
-  if (step) {
-    const parsed = findBestStep(step);
-    if (parsed.type == "Err") {
-      throw new Error(parsed.step);
-    }
-    return (
-      <>
-        <Box gap={1}>
-          <Spinner></Spinner>
-          <Text>{step}</Text>
-        </Box>
-        <RunStep
-          idx={stepIdx}
-          step={parsed}
-          headless={headless}
-          context={context.current}
-          onSuccess={(res) => {
-            setStepIdx(stepIdx + 1);
-          }}
-          onFail={async ({ message }) => {
-            const screenshot_path = `./failure/${scenario.title}.png` as const;
-            try {
-              await fs.mkdir("./failure");
-            } catch (e) {}
-
-            const screenshot = await context.current.page?.screenshot({
-              path: screenshot_path,
-            });
-
-            open(screenshot_path);
-
-            onFail({ type: "failure", message, image: screenshot_path });
-            if (closeAfterFail) {
-              context.current.browser?.close();
-            }
-          }}
-        />
-      </>
-    );
-  } else {
-    return <Text>No more steps</Text>;
-  }
+    (async () => {
+      const result = await runScenario(
+        feature,
+        scenario,
+        headless,
+        (update) => {
+          switch (update.type) {
+            case "step_started":
+              setStatus(`Running step ${update.step}`);
+              break;
+            // default:
+            //   assertUnreachable(update);
+          }
+        }
+      );
+      if (result.type === "runner_error") {
+        onFail({ type: "failure", message: result.message });
+      } else {
+        onComplete();
+      }
+    })();
+  }, [scenario.title]);
+  return (
+    <>
+      <Box gap={1}>
+        <Spinner></Spinner>
+        <Text>{status}</Text>
+      </Box>
+    </>
+  );
 };
 type StepParseResult = ReturnType<typeof findBestStep>;
 type ParsedStep = Exclude<StepParseResult, { type: "Err" }>;
-
-const RunStep = ({
-  step,
-  idx,
-  context,
-  onSuccess,
-  onFail,
-  headless,
-}: {
-  step: ParsedStep;
-  idx: number;
-  context: Context;
-  headless: boolean;
-  onSuccess: (res: { type: "success" }) => void;
-  onFail: (res: { type: "failure"; message: string }) => void;
-}) => {
-  useEffect(() => {
-    (async () => {
-      try {
-        await step.execute(context).then((ret) => {
-          onSuccess({ type: "success" });
-        });
-      } catch (e) {
-        onFail({ type: "failure", message: (e as Error).message });
-      }
-    })();
-  }, [idx]);
-  return <Text></Text>;
-};
 
 const ParseResultsDisplay = ({ features }: { features: DecodedFeature[] }) => {
   const feat = features.flatMap((feature) =>

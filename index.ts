@@ -114,7 +114,7 @@ program
               console.log(`  Completed scenario: ${update.scenarioTitle}`);
               break;
             default:
-              assertUnreachable(update.type);
+              assertUnreachable(update);
           }
         },
       });
