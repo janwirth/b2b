@@ -13,11 +13,15 @@ const for_ = "for";
 
 const input_text = step(
   { I, write, text, into, the, input_name: z.string() },
-  async (args) => {}
+  async (args) => {
+    return { type: "success" };
+  }
 );
 const search_for = step(
   { I, search, for_, query: z.string() },
-  async (args) => {}
+  async (args) => {
+    return { type: "success" };
+  }
 );
 
 test("step parser keyword workaround", () => {

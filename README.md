@@ -21,6 +21,7 @@
    ```
 
 3. 👀 Run `bun x @janwirth/b2b watch` to start interactive mode
+4. ✅ Run `bun x @janwirth/b2b run` to run all features
 
 ![Watch mode](https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrcGVuMjg5ODF0OWdiMDE4emlzbjZvemNscWsxcXM0NXp2emZqaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/U8YmUzgsHpysM1LExG/giphy.gif)
 
