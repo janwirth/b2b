@@ -93,6 +93,8 @@ const wait = "wait";
 const seconds = "seconds";
 const reload = "reload";
 const page = "page";
+const ping = "ping";
+const press = "press";
 
 // Step definitions using the new step-parser
 export const steps = {
@@ -552,6 +554,70 @@ ${(e as Error).message}
       const [browser, page] = await ensurePage(context, true);
       await page.reload({ waitUntil: "networkidle2" });
       return { type: "success" };
+    }
+  ),
+
+  // "I ping <url>"
+  ping: step(
+    {
+      I,
+      ping,
+      url: z.string(),
+    },
+    async ({ url }, context) => {
+      const normalized = normalizeUrl(url);
+      try {
+        const response = await fetch(normalized);
+        if (!response.ok) {
+          return {
+            type: "failure",
+            message: `Failed to ping ${normalized}: HTTP ${response.status}`,
+          };
+        }
+        return { type: "success" };
+      } catch (e) {
+        return {
+          type: "failure",
+          message: `Could not ping ${normalized}: ${(e as Error).message}`,
+        };
+      }
+    }
+  ),
+
+  // "I press <key> in <label>"
+  pressKey: step(
+    {
+      I,
+      press,
+      key: z.string(),
+      in: in_,
+      label: z.string(),
+    },
+    async ({ key, label }, context) => {
+      const [browser, page] = await ensurePage(context, true);
+      const sel = label.trim().replaceAll(/(^['"]|['"]$)/g, "");
+      try {
+        const input = await page?.waitForSelector(inputSelector(sel), {
+          timeout: 1000,
+        });
+        if (!input) {
+          return {
+            type: "failure",
+            message: `Could not find input ${inputSelector(sel)}`,
+          };
+        }
+        const cleanKey = key.trim().replaceAll(/(^['"]|['"]$)/g, "");
+        await input.press(cleanKey);
+        await timeout(100);
+        return { type: "success" };
+      } catch (e) {
+        return {
+          type: "failure",
+          message: `Could not press ${key} in ${inputSelector(sel)}: ${
+            (e as Error).message
+          }`,
+        };
+      }
     }
   ),
 };

@@ -1,5 +1,7 @@
-export const serve = () =>
-  Bun.serve({
+export const serve = () => {
+  let isCleared = false;
+
+  return Bun.serve({
     port: 3000,
     fetch: async (request) => {
       // await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -9,6 +11,27 @@ export const serve = () =>
       if (import.meta.main) {
         console.log("Serving mock server", request.url);
       }
+
+      if (request.url.endsWith("/reset-status")) {
+        const content = isCleared ? "cleared" : "stale data";
+        return new Response(content, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        });
+      }
+
+      if (request.url.endsWith("/reset")) {
+        isCleared = true;
+        return new Response("ok", {
+          status: 200,
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        });
+      }
+
       if (request.url.endsWith("/image-with-text.png")) {
         const content = Bun.file("./tests/image-with-text.png");
         return new Response(await content, {
@@ -27,6 +50,7 @@ export const serve = () =>
       });
     },
   });
+};
 
 if (import.meta.main) {
   serve();

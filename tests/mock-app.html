@@ -73,6 +73,16 @@
     <textarea aria-label="example-input"></textarea>
 
     <div style="margin-top: 20px">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Type and press Enter"
+        aria-label="search-input"
+      />
+      <div id="searchMessage" style="margin-top: 10px; font-weight: bold"></div>
+    </div>
+
+    <div style="margin-top: 20px">
       <input type="file" id="fileInput" accept=".pdf,.doc,.docx" />
       <div id="uploadMessage" style="margin-top: 10px; font-weight: bold"></div>
     </div>
@@ -106,6 +116,17 @@
             document.getElementById("uploadMessage").textContent =
               "File uploaded successfully";
             document.getElementById("uploadMessage").style.color = "#28a745";
+          }
+        });
+
+      document
+        .getElementById("searchInput")
+        .addEventListener("keypress", function (event) {
+          if (event.key === "Enter") {
+            const searchTerm = this.value;
+            document.getElementById("searchMessage").textContent =
+              "Search for: " + searchTerm;
+            document.getElementById("searchMessage").style.color = "#007bff";
           }
         });
     </script>

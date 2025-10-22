@@ -47,3 +47,21 @@
 ## Perspectives
 
 - 🎬 Effortlessly record product demos for marketing purposes using the latest UI
+
+## Creating new Features
+
+I used this prompt to generate the mock reset step:
+
+```
+Let's use @tdd.mdc to create a new feature.
+
+We need to have a step that pings an endpoint to reset the application for a testable state (clearing test-created data etc.)
+
+The @mock-server.ts  should have some isCleared variable that is visible in an endpoint so that the test runner can verify it with I see
+
+When I open localhost:3000/reset-status
+Then I see "stale data"
+When I ping localhost:3000/reset
+And I reload
+Then I see "cleared"
+```

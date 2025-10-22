@@ -11,7 +11,8 @@ alwaysApply: false
 
 ## New Feature Flow
 
-1. Add feature file with description
+1. Add feature file with description (annotate with `@focus` to focus on it)
 2. Update mock server if needed
 3. Add step definitions in `steps.ts`
 4. Verify with `bun run test`
+5. Remove `@focus` annotation
