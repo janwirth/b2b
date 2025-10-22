@@ -1,11 +1,7 @@
 import fs from "fs/promises";
-import {
-  findBestStep,
-  type Context,
-  type StepSuccess,
-  type StepFailure,
-} from "../step-library/steps";
+import { type Context } from "../step-library/steps";
 import type { DecodedFeature } from "../feature-parser/parser-flow";
+import { runScenario } from "./runScenario";
 
 export type RunnerUpdate =
   | { type: "feature_started"; featureTitle: string }
@@ -44,79 +40,7 @@ export type FeatureResult = {
   }>;
   success: boolean;
 };
-
-const runScenario = async (
-  scenario: { title: string; steps: string[] },
-  context: Context,
-  headless: boolean,
-  onUpdate?: (update: RunnerUpdate) => void
-): Promise<ScenarioResult> => {
-  onUpdate?.({ type: "scenario_started", scenarioTitle: scenario.title });
-
-  for (const step of scenario.steps) {
-    onUpdate?.({ type: "step_started", step });
-
-    const bestStep = findBestStep(step);
-
-    try {
-      if (bestStep.type === "Err") {
-        return {
-          type: "runner_error",
-          message: `No matching step definition found for: "${step}"`,
-          scenarioTitle: scenario.title,
-          step,
-        };
-      }
-
-      const result = await bestStep.execute(context);
-
-      // if (result.type === "failure") {
-      //   // Take screenshot on failure
-      //   const screenshot_path = `./failure/${scenario.title}.png` as const;
-      //   try {
-      //     await fs.mkdir("./failure", { recursive: true });
-      //   } catch (e) {
-      //     // Directory might already exist
-      //   }
-
-      //   const screenshot = await context.page?.screenshot({
-      //     path: screenshot_path,
-      //   });
-
-      //   return {
-      //     type: "runner_error",
-      //     message: result.message,
-      //     scenarioTitle: scenario.title,
-      //     step,
-      //     image: screenshot_path,
-      //   };
-      // }
-
-      onUpdate?.({ type: "step_completed", step });
-    } catch (stepError) {
-      // Handle different error types
-      let errorMessage = "Unknown step error";
-      if (stepError instanceof Error) {
-        errorMessage =
-          stepError.message || stepError.name || "Error without message";
-      } else if (typeof stepError === "string") {
-        errorMessage = stepError;
-      } else if (stepError && typeof stepError === "object") {
-        errorMessage = JSON.stringify(stepError, null, 2);
-      }
-
-      return {
-        type: "runner_error",
-        message: `Step execution failed: ${errorMessage}`,
-        scenarioTitle: scenario.title,
-        step,
-      };
-    }
-  }
-
-  onUpdate?.({ type: "scenario_completed", scenarioTitle: scenario.title });
-  return { type: "success", status: "ok" };
-};
+import chalk from "chalk";
 
 export const runFeature = async (
   feature: DecodedFeature,
@@ -125,10 +49,6 @@ export const runFeature = async (
   const { headless = true, closeAfterFail = true, onUpdate } = options;
 
   const startTime = Date.now();
-  const context: Context = {
-    featureFilePath: feature.filePath,
-  };
-
   try {
     onUpdate?.({ type: "feature_started", featureTitle: feature.title });
 
@@ -143,8 +63,8 @@ export const runFeature = async (
 
     for (const scenario of activeScenarios) {
       const scenarioResult = await runScenario(
+        feature,
         scenario,
-        context,
         headless,
         onUpdate
       );
@@ -156,6 +76,7 @@ export const runFeature = async (
 
       if (scenarioResult.type === "runner_error") {
         hasFailures = true;
+        console.log(chalk.yellow("Scenario failed"), scenario.title);
         // Continue running other scenarios instead of throwing
       }
     }
@@ -167,20 +88,12 @@ export const runFeature = async (
       duration_ms,
     });
 
-    // Clean up browser
-    await context.browser?.close();
-
     return {
       duration_ms,
       scenarios: scenarioResults,
       success: !hasFailures,
     };
   } catch (error) {
-    // Clean up browser on error
-    if (closeAfterFail) {
-      await context.browser?.close();
-    }
-
     // For unexpected errors, create a feature result with error information
     const duration_ms = Date.now() - startTime;
     const errorMessage =

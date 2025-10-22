@@ -8,6 +8,10 @@ Scenario: Basic
     And I do not see "Test Page"
     And the tab reads "Hello World Test Page"
 
+# Scenario: Patiences
+#     When I open localhost:3000
+#     Then I see "Hello World" patiently
+
 @shouldFail
 Scenario: Should fail
     When I open localhost:3000

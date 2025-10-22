@@ -8,10 +8,12 @@ export type InferStep<T extends Record<string, any>> = {
     : never;
 };
 
-export type ParseSuccess<T, Output> = {
+export type ParseSuccess<T> = {
   type: "success";
   args: T;
-  execute: (context: Context) => Promise<{ type: "success" }>;
+  execute: (
+    context: Context
+  ) => Promise<{ type: "success" } | { type: "failure"; message: string }>;
 };
 
 export type ParseFailure = {
@@ -23,9 +25,7 @@ export type ParseFailure = {
   input: string;
 };
 
-export type ParseResult<Input, Output> =
-  | ParseSuccess<Input, Output>
-  | ParseFailure;
+export type ParseResult<Input, Output> = ParseSuccess<Input> | ParseFailure;
 
 export type ParserTypes =
   | string
@@ -40,7 +40,10 @@ export type Step<T extends Record<string, ParserTypes>, Output> = {
 
 export function step<T extends Record<string, ParserTypes>, Output>(
   defs: T,
-  execute: (step: InferStep<T>, context: Context) => Promise<Output>
+  execute: (
+    step: InferStep<T>,
+    context: Context
+  ) => Promise<{ type: "success" } | { type: "failure"; message: string }>
 ): Step<T, Output> {
   const [first, ...rest] = Object.entries(defs)
     .map(([key, value]) => {

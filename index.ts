@@ -22,6 +22,7 @@ program
   .version(packageJson.version || "1.0.0");
 
 import {
+  assertUnreachable,
   printCheatSheet,
   shutdownBrowsers,
 } from "./packages/step-library/steps";
@@ -95,20 +96,25 @@ program
         onUpdate: (update) => {
           switch (update.type) {
             case "feature_started":
-              console.log(`  Starting feature: ${update.featureTitle}`);
+              console.log(`\nfeature: ${update.featureTitle}`);
+              break;
+            case "feature_completed":
+              console.log(`Completed feature: ${update.featureTitle}`);
               break;
             case "scenario_started":
-              console.log(`  Starting scenario: ${update.scenarioTitle}`);
+              console.log(`  Scenario: ${update.scenarioTitle}`);
               break;
             case "step_started":
-              console.log(`  Starting step: ${update.step}`);
+              console.log(`    - ${update.step}`);
               break;
             case "step_completed":
-              console.log(`  Completed step: ${update.step}`);
+              // console.log(`  Completed step: ${update.step}`);
               break;
             case "scenario_completed":
               console.log(`  Completed scenario: ${update.scenarioTitle}`);
               break;
+            default:
+              assertUnreachable(update.type);
           }
         },
       });

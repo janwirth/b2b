@@ -7,13 +7,10 @@
  */
 
 import type { Browser, ElementHandle, Page, ScreenRecorder } from "puppeteer";
-import { fetch } from "bun";
-import puppeteer from "puppeteer";
 import { z } from "zod";
 import {
   step,
   type ParseFailure,
-  type ParseResult,
   type ParseSuccess,
   type Step,
 } from "../step-parser";
@@ -23,9 +20,7 @@ import { readFile } from "node:fs/promises";
 
 // Types
 export type Context = {
-  browser?: Browser;
-  page?: Page;
-  recorder?: ScreenRecorder;
+  page: Page;
   featureFilePath: string;
 };
 
@@ -60,59 +55,10 @@ export const shutdownBrowsers = async () => {
 
 // Browser setup
 const ensurePage = async (context: Context, headless: boolean) => {
-  if (!context.browser) {
-    // https://stackoverflow.com/questions/62220867/puppeteer-chromium-instances-remain-active-in-the-background-after-browser-disc
-    context.browser = await puppeteer.launch({
-      headless: false,
-      args: ["--no-sandbox", "--no-zygote"],
-    });
-    browsers.push(context.browser);
-    const bContext = context.browser.defaultBrowserContext();
-    await bContext.overridePermissions("http://localhost:3000", [
-      "clipboard-read",
-      "clipboard-write",
-      "clipboard-sanitized-write",
-    ]);
-  }
-  context.page = (await context.browser.pages())[0];
   if (!context.page) {
-    context.page = await context.browser.newPage();
-
-    context.page.on("request", (req) => {
-      if (req.url().includes("/api/cv-management/upload"))
-        console.log("Uploading:", req.headers()["content-type"]);
-    });
-
-    await context.page.evaluate(() => {
-      const clipboard = {
-        text: "",
-        async writeText(text: string) {
-          this.text = text;
-        },
-        async readText() {
-          return this.text;
-        },
-      };
-      Object.defineProperty(navigator, "clipboard", { value: clipboard });
-    });
+    throw new Error("Page not found in context");
   }
-  if (!context.recorder) {
-    console.log("starting recorder");
-    console.log("context.page", context.page.isClosed());
-    try {
-      context.recorder = await context.page?.screencast({
-        path: `./recording/${context.featureFilePath}.webm`,
-      });
-    } catch (e) {
-      console.error("error starting recorder", e);
-    }
-    console.log("recorder started", context.recorder);
-  }
-  const server_up = await fetch("http://localhost:3000", { method: "GET" });
-  if (!context.page.url().includes("localhost:3000")) {
-    await context.page.goto("http://localhost:3000");
-  }
-  return [context.browser, context.page] as [Browser, Page];
+  return [null, context.page] as [null, Page];
 };
 
 // Keywords - consistent constants for all step definitions
@@ -423,18 +369,27 @@ ${(e as Error).message}
     async ({ text, label }, context) => {
       const [browser, page] = await ensurePage(context, true);
       const sel = label.trim().replaceAll(/(^['"]|['"]$)/g, "");
-      const input = await page?.waitForSelector(inputSelector(sel), {
-        timeout: 1000,
-      });
-      if (!input) {
+      try {
+        const input = await page?.waitForSelector(inputSelector(sel), {
+          timeout: 1000,
+        });
+        if (!input) {
+          return {
+            type: "failure",
+            message: `Could not find input ${inputSelector(sel)}`,
+          };
+        }
+        await input.click({ clickCount: 3 });
+        await input.type(text.replaceAll(/(^['"]|['"]$)/g, ""));
+        return { type: "success" };
+      } catch (e) {
         return {
           type: "failure",
-          message: `Could not find input ${inputSelector(sel)}`,
+          message: `Could not find input ${inputSelector(sel)}: ${
+            (e as Error).message
+          }`,
         };
       }
-      await input.click({ clickCount: 3 });
-      await input.type(text.replaceAll(/(^['"]|['"]$)/g, ""));
-      return { type: "success" };
     }
   ),
 
@@ -644,7 +599,7 @@ const uploadFile = async (page: Page, filePath: string) => {
 export const findBestStep = (
   stepString: string
 ):
-  | ParseSuccess<any, any>
+  | ParseSuccess<any>
   | {
       type: "Err";
       step: string;

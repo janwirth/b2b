@@ -28,6 +28,14 @@ test("step parser keyword workaround", () => {
   expect("args" in result).toBe(true);
 });
 
+// test("patience", () => {
+//   const result = search_for.parse("I search for 'Hello World' patiently");
+//   if (result.type === "failure") {
+//     throw new Error("Expected success");
+//   } else {
+//   }
+// });
+
 test("step parser failure case", () => {
   const result = input_text.parse("I write the text into the input_name");
   if ("args" in result) {
