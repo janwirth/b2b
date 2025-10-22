@@ -6,7 +6,13 @@
  * structured step definition system.
  */
 
-import type { Browser, ElementHandle, Page, ScreenRecorder } from "puppeteer";
+import type {
+  Browser,
+  ElementHandle,
+  KeyInput,
+  Page,
+  ScreenRecorder,
+} from "puppeteer";
 import { z } from "zod";
 import {
   step,
@@ -17,6 +23,7 @@ import {
 import { ocrImageAtUrl } from "./ocr";
 import { inputSelector, selectXPath } from "./selectors";
 import { readFile } from "node:fs/promises";
+import { A } from "@mobily/ts-belt";
 
 // Types
 export type Context = {
@@ -148,9 +155,9 @@ ${(e as Error).message}
       find,
       text: z.string(),
       in: in_,
-      label: z.string(),
+      input_label: z.string(),
     },
-    async ({ text, label }, context) => {
+    async ({ text, input_label }, context) => {
       const [browser, page] = await ensurePage(context, true);
       await page.waitForNetworkIdle();
       let tries = 0;
@@ -158,7 +165,7 @@ ${(e as Error).message}
         await timeout(40);
         try {
           const textValue = await page.$eval(
-            inputSelector(label),
+            inputSelector(input_label),
             (input) => (input as HTMLInputElement).value
           );
           if (
@@ -170,14 +177,14 @@ ${(e as Error).message}
           } else {
             return {
               type: "failure",
-              message: `input ${label} does not contain ${text}: ${textValue}`,
+              message: `input ${input_label} does not contain ${text}: ${textValue}`,
             };
           }
         } catch (e) {}
       }
       return {
         type: "failure",
-        message: `Could not find input ${inputSelector(label)}`,
+        message: `Could not find input ${inputSelector(input_label)}`,
       };
     }
   ),
@@ -366,11 +373,11 @@ ${(e as Error).message}
       type: type_,
       text: z.string(),
       into,
-      label: z.string(),
+      input_label: z.string(),
     },
-    async ({ text, label }, context) => {
+    async ({ text, input_label }, context) => {
       const [browser, page] = await ensurePage(context, true);
-      const sel = label.trim().replaceAll(/(^['"]|['"]$)/g, "");
+      const sel = input_label.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
         const input = await page?.waitForSelector(inputSelector(sel), {
           timeout: 1000,
@@ -591,11 +598,11 @@ ${(e as Error).message}
       press,
       key: z.string(),
       in: in_,
-      label: z.string(),
+      input_label: z.string(),
     },
-    async ({ key, label }, context) => {
+    async ({ key, input_label }, context) => {
       const [browser, page] = await ensurePage(context, true);
-      const sel = label.trim().replaceAll(/(^['"]|['"]$)/g, "");
+      const sel = input_label.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
         const input = await page?.waitForSelector(inputSelector(sel), {
           timeout: 1000,
@@ -607,7 +614,35 @@ ${(e as Error).message}
           };
         }
         const cleanKey = key.trim().replaceAll(/(^['"]|['"]$)/g, "");
-        await input.press(cleanKey);
+        const KeySchema = z.union([
+          z.literal("Enter"),
+          z.literal("Tab"),
+          z.literal("Escape"),
+          z.literal("ArrowLeft"),
+          z.literal("ArrowRight"),
+          z.literal("ArrowUp"),
+          z.literal("ArrowDown"),
+          z.literal("PageUp"),
+          z.literal("PageDown"),
+          z.literal("Home"),
+          z.literal("End"),
+          z.literal("Delete"),
+          z.literal("Backspace"),
+          z.literal("Insert"),
+          z.literal("F1"),
+          z.literal("F2"),
+          z.literal("F3"),
+          z.literal("F4"),
+          z.literal("F5"),
+          z.literal("F6"),
+          z.literal("F7"),
+          z.literal("F8"),
+          z.literal("F9"),
+          z.literal("F10"),
+          z.literal("F11"),
+          z.literal("F12"),
+        ]);
+        await input.press(KeySchema.parse(cleanKey));
         await timeout(100);
         return { type: "success" };
       } catch (e) {
@@ -702,7 +737,8 @@ export { ocrImageAtUrl } from "./ocr";
 export { inputSelector, selectXPath, assertUnreachable } from "./selectors";
 
 export const printCheatSheet = () => {
-  for (const [stepName, stepDef] of Object.entries(steps)) {
+  const items = Object.values(steps);
+  for (const stepDef of A.sortBy(items, (item) => item.description)) {
     console.log(stepDef.description);
   }
 };
