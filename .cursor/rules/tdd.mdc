@@ -2,10 +2,16 @@
 alwaysApply: false
 ---
 
-# Test driven development
+# TDD Rules
 
-Quick guide
+- Run tests: `bun run test`
+- Available steps `b2b-dev cheatsheet`
+- Features: `features/*.feature`
+- Step definitions: `steps.ts`
 
-- Use bun run test to verify results
-- features directory for feature definitions
-- steps.ts for parsing
+## New Feature Flow
+
+1. Add feature file with description
+2. Update mock server if needed
+3. Add step definitions in `steps.ts`
+4. Verify with `bun run test`
