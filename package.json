@@ -3,6 +3,10 @@
   "version": "0.0.14",
   "module": "index.ts",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/janwirth/b2b.git"
+  },
   "scripts": {
     "build": "bun build --target=bun ./index.ts --outfile=dist/index.js",
     "test": "bun test --timeout 10000",
@@ -34,7 +38,6 @@
   "dependencies": {
     "@jantimon/glob-watch": "^0.2.0",
     "@mobily/ts-belt": "^3.13.1",
-    "chevrotain": "^11.0.3",
     "commander": "^14.0.1",
     "date-fns": "^4.1.0",
     "open": "^10.2.0",
