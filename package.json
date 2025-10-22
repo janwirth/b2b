@@ -1,12 +1,12 @@
 {
   "name": "@janwirth/b2b",
-  "version": "0.0.12",
+  "version": "0.0.11",
   "module": "index.ts",
   "type": "module",
   "scripts": {
     "build": "bun build --target=bun ./index.ts --outfile=dist/index.js",
     "test": "bun test --timeout 10000",
-    "release": "npm version patch && git commit -m 'Release' -a && npm publish --access public && git push",
+    "release": "npm version patch  && npm publish --access public && git push",
     "prepublishOnly": "bun run build"
   },
   "bin": {
