@@ -37,6 +37,7 @@
     "commander": "^14.0.1",
     "date-fns": "^4.1.0",
     "open": "^10.2.0",
+    "puppeteer-screen-recorder": "^3.0.6",
     "react-devtools-core": "^7.0.0",
     "zod": "^4.1.12"
   },

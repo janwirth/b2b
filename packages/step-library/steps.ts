@@ -63,7 +63,7 @@ const ensurePage = async (context: Context, headless: boolean) => {
   if (!context.browser) {
     // https://stackoverflow.com/questions/62220867/puppeteer-chromium-instances-remain-active-in-the-background-after-browser-disc
     context.browser = await puppeteer.launch({
-      headless,
+      headless: false,
       args: ["--no-sandbox", "--no-zygote"],
     });
     browsers.push(context.browser);
@@ -95,6 +95,18 @@ const ensurePage = async (context: Context, headless: boolean) => {
       };
       Object.defineProperty(navigator, "clipboard", { value: clipboard });
     });
+  }
+  if (!context.recorder) {
+    console.log("starting recorder");
+    console.log("context.page", context.page.isClosed());
+    try {
+      context.recorder = await context.page?.screencast({
+        path: `./recording/${context.featureFilePath}.webm`,
+      });
+    } catch (e) {
+      console.error("error starting recorder", e);
+    }
+    console.log("recorder started", context.recorder);
   }
   const server_up = await fetch("http://localhost:3000", { method: "GET" });
   if (!context.page.url().includes("localhost:3000")) {

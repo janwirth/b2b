@@ -239,6 +239,7 @@ const RunScenario = ({
   useEffect(() => {
     // no more steps left
     if (!step) {
+      context.current.recorder?.stop();
       context.current.browser?.close();
       onComplete();
     }

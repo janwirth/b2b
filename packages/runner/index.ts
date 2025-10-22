@@ -70,27 +70,27 @@ const runScenario = async (
 
       const result = await bestStep.execute(context);
 
-      if (result.type === "failure") {
-        // Take screenshot on failure
-        const screenshot_path = `./failure/${scenario.title}.png` as const;
-        try {
-          await fs.mkdir("./failure", { recursive: true });
-        } catch (e) {
-          // Directory might already exist
-        }
+      // if (result.type === "failure") {
+      //   // Take screenshot on failure
+      //   const screenshot_path = `./failure/${scenario.title}.png` as const;
+      //   try {
+      //     await fs.mkdir("./failure", { recursive: true });
+      //   } catch (e) {
+      //     // Directory might already exist
+      //   }
 
-        const screenshot = await context.page?.screenshot({
-          path: screenshot_path,
-        });
+      //   const screenshot = await context.page?.screenshot({
+      //     path: screenshot_path,
+      //   });
 
-        return {
-          type: "runner_error",
-          message: result.message,
-          scenarioTitle: scenario.title,
-          step,
-          image: screenshot_path,
-        };
-      }
+      //   return {
+      //     type: "runner_error",
+      //     message: result.message,
+      //     scenarioTitle: scenario.title,
+      //     step,
+      //     image: screenshot_path,
+      //   };
+      // }
 
       onUpdate?.({ type: "step_completed", step });
     } catch (stepError) {
