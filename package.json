@@ -1,6 +1,6 @@
 {
   "name": "@janwirth/b2b",
-  "version": "0.0.11",
+  "version": "0.0.13",
   "module": "index.ts",
   "type": "module",
   "scripts": {
