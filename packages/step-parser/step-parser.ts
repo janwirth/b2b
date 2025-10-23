@@ -11,6 +11,7 @@ export type InferStep<T extends Record<string, any>> = {
 export type ParseSuccess<T> = {
   type: "success";
   args: T;
+  patiently: boolean;
   execute: (
     context: Context
   ) => Promise<{ type: "success" } | { type: "failure"; message: string }>;
@@ -42,7 +43,8 @@ export function step<T extends Record<string, ParserTypes>, Output>(
   defs: T,
   execute: (
     step: InferStep<T>,
-    context: Context
+    context: Context,
+    patiently: boolean
   ) => Promise<{ type: "success" } | { type: "failure"; message: string }>
 ): Step<T, Output> {
   const [first, ...rest] = Object.entries(defs)
@@ -62,8 +64,7 @@ export function step<T extends Record<string, ParserTypes>, Output>(
     const result: Record<string, any> = {};
 
     // Loop through each token and parser
-    const maxLength = Math.max(tokens.length, parsers.length);
-    for (let i = 0; i < maxLength; i++) {
+    for (let i = 0; i < parsers.length; i++) {
       const token = tokens[i];
       const parserEntry = parsers[i];
 
@@ -128,10 +129,29 @@ export function step<T extends Record<string, ParserTypes>, Output>(
       parsed_so_far.push({ key, value: parseResult.data });
     }
 
+    // Check if there are extra tokens
+    let patiently = false;
+    for (let i = parsers.length; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token === "patiently") {
+        patiently = true;
+      } else {
+        return {
+          type: "failure",
+          expected: `${parsers.length} tokens`,
+          actual: `${tokens.length} tokens`,
+          parsed_so_far,
+          input: step,
+        };
+      }
+    }
+
     return {
       type: "success",
       args: result as InferStep<T>,
-      execute: (context: Context) => execute(result as InferStep<T>, context),
+      patiently,
+      execute: (context: Context) =>
+        execute(result as InferStep<T>, context, patiently),
     };
   };
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp, useInput } from "ink";
-import type { Feature } from "../feature-parser/loadFeatures";
+import type { DecodedFeature } from "../feature-parser/parser-flow";
 
 export type RunnerInputState = {
   focus: number;
@@ -32,7 +32,7 @@ export type RunnerInputActions = {
 };
 
 export const useRunnerInput = (
-  features: Feature[],
+  features: DecodedFeature[],
   onReloadFeature: () => void
 ): RunnerInputState & RunnerInputActions => {
   const [focus, setFocus] = useState(0);
@@ -51,6 +51,9 @@ export const useRunnerInput = (
     setFeaturesToRun([featureTitle, ...featuresToRun]);
     setPassedFeatures(
       [...passedFeatures].filter((feature) => feature !== featureTitle)
+    );
+    setFailedFeatures(
+      [...failedFeatures].filter((feature) => feature.title !== featureTitle)
     );
   };
 
@@ -78,6 +81,7 @@ export const useRunnerInput = (
         })
         .map((f) => f.title)
     );
+    setFailedFeatures([]);
   };
 
   // Keyboard input handling

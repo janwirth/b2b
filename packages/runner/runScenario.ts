@@ -32,6 +32,8 @@ const setup = async (
   await clipboardCompat(browser, page);
   const recorder = new PuppeteerScreenRecorder(page);
   const recordingPath = `./recordings/${feature.title}/${scenario.title}.mp4`;
+  await deleteFileIfExists(`${recordingPath}.failed.mp4`);
+  await deleteFileIfExists(recordingPath);
   await recorder.start(recordingPath);
   const context: Context = {
     featureFilePath: feature.filePath,
@@ -39,6 +41,7 @@ const setup = async (
   };
   // clipboard compat
   const cleanup = async (mode: "failure" | "success") => {
+    // delete other file in case it exists
     await recorder.stop();
     // await new Promise((resolve) => setTimeout(resolve, 50));
     if (mode === "failure") {
@@ -47,6 +50,13 @@ const setup = async (
     await browser.close();
   };
   return [context, cleanup] as const;
+};
+const deleteFileIfExists = async (path: string) => {
+  try {
+    await fs.unlink(path);
+  } catch (e) {
+    // file doesn't exist, ignore
+  }
 };
 const clipboardCompat = async (browser: Browser, page: Page) => {
   await page.evaluate(() => {

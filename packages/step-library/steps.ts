@@ -196,15 +196,21 @@ ${(e as Error).message}
       see,
       text: z.string(),
     },
-    async ({ text }, context) => {
+    async ({ text }, context, patiently) => {
       await timeout(30);
       const [browser, page] = await ensurePage(context, true);
       const txt = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
+        const start = Date.now();
         await page.waitForSelector(selectXPath({ searchTerm: txt }), {
-          timeout: 1000,
+          timeout: patiently ? 15000 : 1000,
           // visible: true,
         });
+        const end = Date.now();
+        if (end - start > 5000) {
+          // todo: implement logging / stuff in general
+          // console.log('Took ');
+        }
       } catch (e) {
         return {
           type: "failure",

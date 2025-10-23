@@ -40,6 +40,7 @@ import { getFeatureFiles } from "../feature-parser/yadda-parser";
 import { loadFeatures } from "../../tests/loadFeatures";
 import { getParseResults } from "../feature-parser/loadFeatures";
 import { runScenario } from "../runner/runScenario";
+import { A } from "@mobily/ts-belt";
 
 const App = () => {
   const parseResult = useLatestFeatures();
@@ -143,7 +144,7 @@ const Runner = ({
         ))}
       </UnorderedList>
       <UnorderedList>
-        {failedFeatures.map((f) => (
+        {A.uniqBy(failedFeatures, (f) => f.title).map((f) => (
           <UnorderedList.Item key={f.title}>
             <Box flexDirection="column">
               <Box>
@@ -235,6 +236,10 @@ const RunScenario = ({
   const [status, setStatus] = useState(`Starting scenario ${scenario.title}`);
   useEffect(() => {
     (async () => {
+      if (scenario.skipReason) {
+        onComplete();
+        return;
+      }
       const result = await runScenario(
         feature,
         scenario,

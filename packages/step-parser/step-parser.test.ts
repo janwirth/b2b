@@ -90,3 +90,16 @@ test("Most likely matches", () => {
     `Most likely matches PASS IF LOOK GOOD: ${suggestMostLikelyMatches(input)}`
   );
 });
+
+test("patience", () => {
+  const result = input_text.parse(
+    "I write 'Hello World' into the bio patiently"
+  );
+  if ("expected" in result) {
+    throw new Error("Expected success");
+  }
+  expect("args" in result).toBe(true);
+  expect(result.args.text).toBe("Hello World");
+  expect(result.args.input_name).toBe("bio");
+  expect(result.patiently).toBe(true);
+});
