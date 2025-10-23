@@ -77,15 +77,19 @@ import type { FeatureSkipReason, ScenarioSkipReason } from "./loadFeatures";
 const ExampleFeatures: Record<string, ExampleFeature<any>> = {
   oneFocused: {
     input: {
-      A: { scenarios: [], annotations: ["focus"] },
-      B: { scenarios: [], annotations: [] },
+      A: { scenarios: [[]], annotations: ["focus"] },
+      B: { scenarios: [[]], annotations: [] },
     },
     output: {
-      A: { skipReason: null, isFocused: true, scenarios: [] },
+      A: {
+        skipReason: null,
+        isFocused: true,
+        scenarios: [{ skipReason: null, isFocused: false }],
+      },
       B: {
         skipReason: "other-feature-focused",
         isFocused: false,
-        scenarios: [],
+        scenarios: [{ skipReason: "other-feature-focused", isFocused: false }],
       },
     },
   },

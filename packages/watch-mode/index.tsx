@@ -48,8 +48,6 @@ const App = () => {
   if (parseResult.type == "pending") {
     return (
       <Box gap={1}>
-        {/* <Spinner></Spinner> */}
-
         <Text>Loading</Text>
       </Box>
     );
@@ -113,7 +111,7 @@ const Runner = ({
                   {failedFeatures
                     .map((f) => f.title)
                     .includes(feature.title) && <Badge color="red">fail</Badge>}
-                  {<Badge color="beige">{feature.skipReason}</Badge>}
+                  {/* {<Badge color="beige">{feature.skipReason}</Badge>} */}
                   <Box flexDirection="column">
                     <Text>{feature.title}</Text>
 
