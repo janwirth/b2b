@@ -19,10 +19,7 @@ export const inputSelector = (label: string) =>
   `input[aria-label*='${label}'], textarea[aria-label*='${label}']`;
 
 type XPathValue =
-  | {
-      type: "function";
-      expression: typeof selectAllText | "@aria-label" | "@placeholder";
-    }
+  | { type: "function"; expression: typeof selectAllText | "@aria-label" | "@placeholder" }
   | { type: "literal"; text: string };
 
 // Concatenates multiple text nodes from an element
@@ -72,7 +69,7 @@ export const selectXPath = ({ searchTerm }: { searchTerm: string }) => {
 };
 
 /**
- * Finds an input element by multiple strategies
+ * Finds an input or textarea element by multiple strategies
  * 1. By aria-label attribute
  * 2. By associated label text (nested inside label tag)
  * 3. By associated label text (label tag with for attribute or next sibling)
@@ -80,7 +77,7 @@ export const selectXPath = ({ searchTerm }: { searchTerm: string }) => {
  * @param page - Puppeteer page instance
  * @param searchTerm - The label text or aria-label to search for
  * @param options - Configuration options
- * @returns The input element or null if not found
+ * @returns The input or textarea element or null if not found
  */
 export const findInputElement = async (
   page: any,
@@ -111,6 +108,24 @@ export const findInputElement = async (
 
       if (nestedInput) {
         return nestedInput;
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
+    try {
+      // Try to find textarea nested inside label with matching text
+      const nestedTextareaXPath = `//label[contains(${translate({
+        type: "function",
+        expression: selectAllText,
+      })}, ${translate({ type: "literal", text: label })})]//textarea`;
+
+      const nestedTextarea = await page?.waitForSelector(`xpath/${nestedTextareaXPath}`, {
+        timeout: 500,
+      });
+
+      if (nestedTextarea) {
+        return nestedTextarea;
       }
     } catch {
       // Continue to next strategy
@@ -165,12 +180,35 @@ export const findInputElement = async (
     }
 
     try {
+      // Try to find textarea next to label with matching text
+      const adjacentTextareaXPath = `//label[contains(${translate({
+        type: "function",
+        expression: selectAllText,
+      })}, ${translate({
+        type: "literal",
+        text: label,
+      })})]//following-sibling::textarea[1]`;
+
+      const adjacentTextarea = await page?.waitForSelector(
+        `xpath/${adjacentTextareaXPath}`,
+        {
+          timeout: 500,
+        }
+      );
+
+      if (adjacentTextarea) {
+        return adjacentTextarea;
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
+    try {
       // Try to find input by placeholder attribute (case-insensitive)
-      const placeholderXPath = `//*[contains(${translate({
+      const placeholderXPath = `//input[contains(${translate({
         type: "function",
         expression: "@placeholder",
       })}, ${translate({ type: "literal", text: label })})]`;
-      console.log(placeholderXPath);
 
       const placeholderInput = await page?.waitForSelector(
         `xpath/${placeholderXPath}`,
@@ -181,6 +219,27 @@ export const findInputElement = async (
 
       if (placeholderInput) {
         return placeholderInput;
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
+    try {
+      // Try to find textarea by placeholder attribute (case-insensitive)
+      const placeholderTextareaXPath = `//textarea[contains(${translate({
+        type: "function",
+        expression: "@placeholder",
+      })}, ${translate({ type: "literal", text: label })})]`;
+
+      const placeholderTextarea = await page?.waitForSelector(
+        `xpath/${placeholderTextareaXPath}`,
+        {
+          timeout: 500,
+        }
+      );
+
+      if (placeholderTextarea) {
+        return placeholderTextarea;
       }
     } catch {
       // Continue to next strategy
