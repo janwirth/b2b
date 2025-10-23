@@ -234,10 +234,10 @@ const RunScenario = ({
   const [status, setStatus] = useState(`Starting scenario ${scenario.title}`);
   useEffect(() => {
     (async () => {
-      if (scenario.skipReason) {
-        onComplete();
-        return;
-      }
+      // if (scenario.skipReason) {
+      //   onComplete();
+      //   return;
+      // }
       const result = await runScenario(
         feature,
         scenario,
