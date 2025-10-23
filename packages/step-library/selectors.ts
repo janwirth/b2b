@@ -19,7 +19,10 @@ export const inputSelector = (label: string) =>
   `input[aria-label*='${label}'], textarea[aria-label*='${label}']`;
 
 type XPathValue =
-  | { type: "function"; expression: typeof selectAllText | "@aria-label" }
+  | {
+      type: "function";
+      expression: typeof selectAllText | "@aria-label" | "@placeholder";
+    }
   | { type: "literal"; text: string };
 
 // Concatenates multiple text nodes from an element
@@ -73,6 +76,7 @@ export const selectXPath = ({ searchTerm }: { searchTerm: string }) => {
  * 1. By aria-label attribute
  * 2. By associated label text (nested inside label tag)
  * 3. By associated label text (label tag with for attribute or next sibling)
+ * 4. By placeholder attribute
  * @param page - Puppeteer page instance
  * @param searchTerm - The label text or aria-label to search for
  * @param options - Configuration options
@@ -160,17 +164,45 @@ export const findInputElement = async (
       // Continue to next strategy
     }
 
+    try {
+      // Try to find input by placeholder attribute (case-insensitive)
+      const placeholderXPath = `//input[contains(${translate({
+        type: "function",
+        expression: "@placeholder",
+      })}, ${translate({ type: "literal", text: label })})]`;
+
+      const placeholderInput = await page?.waitForSelector(
+        `xpath/${placeholderXPath}`,
+        {
+          timeout: 500,
+        }
+      );
+
+      if (placeholderInput) {
+        return placeholderInput;
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
     return null;
   };
 
-  // Race both strategies - whichever succeeds first
+  // Try both strategies with Promise.allSettled to handle failures gracefully
   try {
-    const input = await Promise.race([
+    const results = await Promise.allSettled([
       findInputByAriaLabel(searchTerm),
       findInputByLabel(searchTerm),
     ]);
 
-    return input || null;
+    // Return the first successful result
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        return result.value;
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }

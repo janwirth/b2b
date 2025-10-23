@@ -1,4 +1,3 @@
-@focus
 Feature: Label Input Patterns
   As a user
   I want to interact with input elements that are associated with labels
@@ -21,3 +20,9 @@ Feature: Label Input Patterns
     Then I see "Hello World"
     And when I type "Linked Input Text" into "Linked Label Input"
     Then I find "Linked Input Text" in "Linked Label Input"
+
+  Scenario: Input with placeholder attribute
+    When I open localhost:3000
+    Then I see "Hello World"
+    And when I type "Placeholder Input Text" into "Placeholder Label"
+    Then I find "Placeholder Input Text" in "Placeholder Label"

@@ -93,6 +93,24 @@ const ExampleFeatures: Record<string, ExampleFeature<any>> = {
       },
     },
   },
+  twoFocusedFeatures: {
+    input: {
+      A: { scenarios: [[]], annotations: ["focus"] },
+      B: { scenarios: [[]], annotations: ["focus"] },
+    },
+    output: {
+      A: {
+        skipReason: null,
+        isFocused: true,
+        scenarios: [{ skipReason: null, isFocused: false }],
+      },
+      B: {
+        skipReason: null,
+        isFocused: true,
+        scenarios: [{ skipReason: null, isFocused: false }],
+      },
+    },
+  },
   oneSkipped: {
     input: {
       A: { scenarios: [], annotations: ["skip"] },

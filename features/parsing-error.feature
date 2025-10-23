@@ -1,5 +1,6 @@
 @skip
 Feature: Parsing Error Example
+    # This feature is an example of a parsing error
 
 Scenario: Login
     When I open localhost:3000
