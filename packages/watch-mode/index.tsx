@@ -234,10 +234,12 @@ const RunScenario = ({
   const [status, setStatus] = useState(`Starting scenario ${scenario.title}`);
   useEffect(() => {
     (async () => {
-      // if (scenario.skipReason) {
-      //   onComplete();
-      //   return;
-      // }
+      // in live mode, we don't want to run scenarios that are skipped because another scenario is focused
+      // but if other feature is focused, we want to run it - the user has explictily selected this feature to run.
+      if (scenario.skipReason == "other-scenario-focused") {
+        onComplete();
+        return;
+      }
       const result = await runScenario(
         feature,
         scenario,

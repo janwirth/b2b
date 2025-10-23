@@ -166,10 +166,11 @@ export const findInputElement = async (
 
     try {
       // Try to find input by placeholder attribute (case-insensitive)
-      const placeholderXPath = `//input[contains(${translate({
+      const placeholderXPath = `//*[contains(${translate({
         type: "function",
         expression: "@placeholder",
       })}, ${translate({ type: "literal", text: label })})]`;
+      console.log(placeholderXPath);
 
       const placeholderInput = await page?.waitForSelector(
         `xpath/${placeholderXPath}`,
