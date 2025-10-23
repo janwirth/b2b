@@ -14,6 +14,7 @@ export const determineFeatureSkipReason = ({
   if (annotations.includes("skip")) {
     return "feature-explicit-skip";
   }
+  // Allow multiple focused features - only skip if other features are focused AND this one isn't
   if (
     otherFeatures.some((feature) => feature.includes("focus")) &&
     !annotations.includes("focus")

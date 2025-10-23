@@ -4,7 +4,7 @@ import {
   determineFeatureSkipReason,
   determineScenarioSkipReason,
 } from "./skipreason";
-test.only("determineSkipReason works correctly", () => {
+test("determineSkipReason works correctly", () => {
   for (const [name, feature] of Object.entries(ExampleFeatures)) {
     const skipReasonA = determineFeatureSkipReason({
       annotations: feature.input.A.annotations,
@@ -124,6 +124,40 @@ const ExampleFeatures: Record<string, ExampleFeature<any>> = {
       },
       B: {
         skipReason: "other-feature-focused",
+        isFocused: false,
+        scenarios: [],
+      },
+    },
+  },
+  twoFocusedFeatures: {
+    input: {
+      // Both features are focused
+      A: { scenarios: [], annotations: ["focus"] },
+      B: { scenarios: [], annotations: ["focus"] },
+    },
+    output: {
+      A: { skipReason: null, isFocused: true, scenarios: [] },
+      B: { skipReason: null, isFocused: true, scenarios: [] },
+    },
+  },
+  multipleFocusedScenarios: {
+    input: {
+      // Multiple scenarios are focused
+      A: { scenarios: [["focus"], ["focus"], []], annotations: [] },
+      B: { scenarios: [], annotations: [] },
+    },
+    output: {
+      A: {
+        skipReason: null,
+        isFocused: false,
+        scenarios: [
+          { skipReason: null, isFocused: true },
+          { skipReason: null, isFocused: true },
+          { skipReason: "other-scenario-focused", isFocused: false },
+        ],
+      },
+      B: {
+        skipReason: null,
         isFocused: false,
         scenarios: [],
       },

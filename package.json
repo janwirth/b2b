@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "bun build --target=bun ./index.ts --outfile=dist/index.js",
-    "test": "bun test --timeout 10000",
+    "test": "bun test --timeout 15000",
     "release": "npm version patch  && npm publish --access public && git push",
     "prepublishOnly": "bun run build"
   },

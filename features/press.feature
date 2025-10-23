@@ -1,4 +1,3 @@
-@focus
 Feature: Press Keys
 
 Scenario: Press Enter in search input

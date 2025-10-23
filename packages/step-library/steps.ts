@@ -21,7 +21,7 @@ import {
   type Step,
 } from "../step-parser";
 import { ocrImageAtUrl } from "./ocr";
-import { inputSelector, selectXPath } from "./selectors";
+import { inputSelector, selectXPath, findInputElement } from "./selectors";
 import { readFile } from "node:fs/promises";
 import { A } from "@mobily/ts-belt";
 
@@ -164,10 +164,17 @@ ${(e as Error).message}
       for (tries = 0; tries < 10; tries++) {
         await timeout(40);
         try {
-          const textValue = await page.$eval(
-            inputSelector(input_label),
-            (input) => (input as HTMLInputElement).value
+          const sel = input_label.trim().replaceAll(/(^['"]|['"]$)/g, "");
+          const input = await findInputElement(page, sel);
+
+          if (!input) {
+            continue;
+          }
+
+          const textValue = await input.evaluate(
+            (el: HTMLInputElement) => el.value
           );
+
           if (
             textValue
               .toLowerCase()
@@ -184,7 +191,7 @@ ${(e as Error).message}
       }
       return {
         type: "failure",
-        message: `Could not find input ${inputSelector(input_label)}`,
+        message: `Could not find input ${input_label}`,
       };
     }
   ),
@@ -385,17 +392,14 @@ ${(e as Error).message}
       const [browser, page] = await ensurePage(context, true);
       const sel = input_label.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
-        const input = await page?.waitForSelector(inputSelector(sel), {
-          timeout: 1000,
-        });
+        const input = await findInputElement(page, sel);
         if (!input) {
           return {
             type: "failure",
             message: `Could not find input ${inputSelector(sel)}`,
           };
         }
-        await input.click({ clickCount: 3 });
-        await input.type(text.replaceAll(/(^['"]|['"]$)/g, ""));
+        await input.type(text);
         return { type: "success" };
       } catch (e) {
         return {

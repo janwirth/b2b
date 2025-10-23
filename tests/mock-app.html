@@ -87,6 +87,34 @@
       <div id="uploadMessage" style="margin-top: 10px; font-weight: bold"></div>
     </div>
 
+    <!-- Nested label-input pattern: input inside label -->
+    <div style="margin-top: 20px">
+      <label for="nestedInput" style="display: block; margin-bottom: 8px">
+        Nested Label Input
+        <input
+          type="text"
+          id="nestedInput"
+          style="display: block; margin-top: 4px; padding: 8px; width: 100%"
+        />
+      </label>
+    </div>
+
+    <!-- Adjacent label-input pattern: label next to input -->
+    <div style="margin-top: 20px; display: flex; align-items: center; gap: 8px">
+      <label for="adjacentInput">Adjacent Label Input</label>
+      <input type="text" id="adjacentInput" style="padding: 8px; flex: 1" />
+    </div>
+
+    <!-- Label with for attribute pattern: label and input are linked -->
+    <div style="margin-top: 20px">
+      <label for="linkedInput">Linked Label Input</label>
+      <input
+        type="text"
+        id="linkedInput"
+        style="padding: 8px; width: 100%; margin-top: 4px"
+      />
+    </div>
+
     <script>
       document
         .getElementById("pressMeBtn")
