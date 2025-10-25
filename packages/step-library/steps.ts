@@ -209,10 +209,14 @@ ${(e as Error).message}
       const txt = text.trim().replaceAll(/(^['"]|['"]$)/g, "");
       try {
         const start = Date.now();
-        await page.waitForSelector(selectXPath({ searchTerm: txt }), {
-          timeout: patiently ? 15000 : 1000,
-          // visible: true,
-        });
+        const item = await page.waitForSelector(
+          selectXPath({ searchTerm: txt }),
+          {
+            timeout: patiently ? 15000 : 1000,
+            // visible: true,
+          }
+        );
+        await item!.scrollIntoView();
         const end = Date.now();
         if (end - start > 5000) {
           // todo: implement logging / stuff in general
@@ -279,6 +283,7 @@ ${selectXPath({ searchTerm: txt })}
               visible: true,
             }
           );
+
           // console.log(await page.evaluate((el) => el.textContent, item));
           // If we reach here, the element was found, which means we CAN see it
           // This is a failure because we expected NOT to see it
@@ -399,6 +404,7 @@ ${(e as Error).message}
             message: `Could not find input ${inputSelector(sel)}`,
           };
         }
+        await input.scrollIntoView();
         await input.type(text);
         return { type: "success" };
       } catch (e) {
